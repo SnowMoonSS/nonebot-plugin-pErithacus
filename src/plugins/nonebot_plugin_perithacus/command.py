@@ -1,0 +1,67 @@
+from arclet.alconna import Alconna, Arg, Args, Subcommand, Option, CommandMeta
+from nonebot_plugin_alconna import on_alconna
+
+alc = Alconna(
+    "perithacus",
+    Subcommand(
+        "add|添加",
+        Args(
+            Arg("keyword", str, notice="词条名"),
+            Arg("content", str, notice="回复内容"),
+        ),
+        Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
+        Option("-r|--random", Args["isRandom#是否随机回复", bool], default=True),
+        Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
+        Option("-s|--scope", Args["scope#作用域群号", str], default=""),
+        Option("-R|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
+        Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
+        help_text="添加词条",
+    ),
+    Subcommand(
+        "del|删除",
+        Args["keyword#词条名", str],
+        help_text="删除词条。当词条名为某词条的别名时，仅删除该别名",
+    ),
+    Subcommand(
+        "list",
+        help_text="查看所有词条",
+    ),
+    Subcommand(
+        "check|查看",
+        Args["keyword", str],
+        help_text="查看指定词条的内容",
+    ),
+    Subcommand(
+        "search|搜索",
+        Args["keyword", str],
+        help_text="搜索词条",
+    ),
+    Subcommand(
+        "edit|修改",
+        Args(
+            Arg("keyword", str, notice="词条名"),
+        ),
+        Option("-r|--random", Args["isRandom#是否随机回复", bool], default=True),
+        Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
+        Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
+        Option("-s|--scope", Args["scope#作用域群号", int], default=""),
+        Option("-a|--alias", Args["alias#为词条添加别名", list], default=""),
+        Option("-d|--delete", Args["id", int], default=0, help_text="删除指定id的回复"),
+        Option(
+            "-R|--replace",
+            Args(
+                Arg("id", int, notice="将被替换的内容编号"),
+                Arg("content", str, notice="要替换的内容"),
+            ),
+        ),
+        help_text="修改词条",
+    ),
+    meta=CommandMeta(
+        keep_crlf=True,
+    )
+)
+pe = on_alconna(alc, skip_for_unmatch=False, use_cmd_start=True, aliases={"pe"})
+
+@pe.assign("$main")
+async def handle_main():
+    await pe.finish("发送“pe --help”查看帮助")
