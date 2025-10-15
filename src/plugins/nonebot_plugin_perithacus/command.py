@@ -1,5 +1,7 @@
-from arclet.alconna import Alconna, Arg, Args, Subcommand, Option, CommandMeta
+from arclet.alconna import Alconna, Arg, Args, Subcommand, Option, CommandMeta, MultiVar
 from nonebot_plugin_alconna import on_alconna
+from nonebot_plugin_alconna.uniseg import Image, Text, At, UniMessage
+from nepattern import Any
 
 alc = Alconna(
     "perithacus",
@@ -7,7 +9,7 @@ alc = Alconna(
         "add|添加",
         Args(
             Arg("keyword", str, notice="词条名"),
-            Arg("content", str, notice="回复内容"),
+            Arg("content", MultiVar(Any), notice="回复内容"),
         ),
         Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
         Option("-r|--random", Args["isRandom#是否随机回复", bool], default=True),

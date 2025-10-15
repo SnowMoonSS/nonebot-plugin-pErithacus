@@ -1,7 +1,7 @@
 import datetime
 import json
-from nonebot.adapters.onebot.v11 import Event
-from nonebot_plugin_alconna import AlconnaMatch, Match
+from nonebot.adapters import Event
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Arparma, UniMsg
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
@@ -13,7 +13,7 @@ async def _(
     event: Event,
 
     keyword: Match[str] = AlconnaMatch("keyword"),
-    content: Match[str] = AlconnaMatch("content"),
+    content: Match[UniMessage] = AlconnaMatch("content"),
     matchMethod: Match[str] = AlconnaMatch("matchMethod"),
     isRandom: Match[bool] = AlconnaMatch("isRandom"),
     cron: Match[str] = AlconnaMatch("cron"),
@@ -24,6 +24,9 @@ async def _(
     """
     添加词条
     """
+
+    # 处理content
+    content_text = serialize_content(content.result)
 
     # 处理source
     session_id = event.get_session_id()
@@ -83,8 +86,8 @@ async def _(
                 pass
 
     if existing_entry_id:
-        add_content(f"Entry_{existing_entry_id}", content.result)
-        await pe.finish(f"词条 {keyword.result} 加入了新的内容")
+        add_content(f"Entry_{existing_entry_id}", content_text)
+        await pe.finish(f"词条 {keyword.result} 加入了新的内容：{content_text}")
     else:
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         entry_kwargs = {
@@ -126,6 +129,28 @@ async def _(
             await session.refresh(new_entry)
             new_entry_id = new_entry.id
             
-        create_content_list(f"Entry{new_entry_id}")
-        add_content(f"Entry_{new_entry_id}", content.result)
+        create_content_list(f"Entr_{new_entry_id}")
+        add_content(f"Entry_{new_entry_id}", content_text)
         await pe.finish(f"词条 {keyword.result} 创建成功")
+
+
+def serialize_content(content: UniMessage) -> str:
+    """
+    序列化 UniMessage 内容为 JSON 字符串存储
+    """
+    try:
+        return json.dumps(content.dump(), ensure_ascii=False)
+    except Exception:
+        # 如果序列化失败，退化为普通字符串
+        return str(content)
+
+def deserialize_content(data: str) -> UniMessage:
+    """
+    从存储的 JSON 字符串反序列化为 UniMessage
+    """
+    try:
+        segments_data = json.loads(data)
+        return UniMessage.load(segments_data)
+    except Exception:
+        # 如果反序列化失败，创建简单的文本消息
+        return UniMessage(data)
