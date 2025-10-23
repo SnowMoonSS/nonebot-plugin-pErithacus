@@ -14,7 +14,7 @@ alc = Alconna(
         Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
         Option("-r|--random", Args["isRandom#是否随机回复", bool], default=True),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
-        Option("-s|--scope", Args["scope#作用域群号", str], default=""),
+        Option("-s|--scope", Args["scope#作用域", str], default=""),
         Option("-R|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
         Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
         help_text="添加词条",
@@ -22,6 +22,7 @@ alc = Alconna(
     Subcommand(
         "del|删除",
         Args["keyword#词条名", str],
+        Option("-s|--scope", Args["scope#作用域", str], default=""),
         help_text="删除词条。当词条名为某词条的别名时，仅删除该别名",
     ),
     Subcommand(
@@ -58,6 +59,13 @@ alc = Alconna(
         ),
         help_text="修改词条",
     ),
+    Subcommand(
+        "test",
+        Args(
+            Arg("content", MultiVar(Any), notice="测试"),
+        ),
+        help_text="测试匹配",
+        ),
     meta=CommandMeta(
         keep_crlf=True,
     )

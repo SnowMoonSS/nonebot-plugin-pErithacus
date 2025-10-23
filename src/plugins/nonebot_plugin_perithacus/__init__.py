@@ -11,6 +11,7 @@ from .config import Config
 from . import command
 from . import database
 from . import add
+from . import delete
 
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
