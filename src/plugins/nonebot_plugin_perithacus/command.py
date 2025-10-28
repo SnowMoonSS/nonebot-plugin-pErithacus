@@ -8,7 +8,7 @@ alc = Alconna(
     Subcommand(
         "add|添加",
         Args(
-            Arg("keyword", str, notice="词条名"),
+            Arg("keyword", Any, notice="词条名"),
             Arg("content", MultiVar(Any), notice="回复内容"),
         ),
         Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),

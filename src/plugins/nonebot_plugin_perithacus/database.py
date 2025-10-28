@@ -4,7 +4,7 @@ from nonebot_plugin_orm import Model, async_scoped_session
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, Text, DateTime, select, create_engine, MetaData, Table, Column, Integer
 from typing import Optional
-from nonebot_plugin_datastore import get_plugin_data
+from nonebot_plugin_localstore import get_plugin_data_dir
 
 class Index(Model):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -25,8 +25,7 @@ def create_content_list(table_name: str):
     在 nonebot_plugin_perithacus_replies.db 中创建一个名为 table_name 的表，
     结构为 id:int, content:text, timap:DateTime
     """
-    plugin_data = get_plugin_data()
-    db_path = plugin_data.data_dir / "content.db"
+    db_path = get_plugin_data_dir() / "content.db"
     engine = create_engine(f"sqlite:///{db_path}")
     metadata = MetaData()
     table = Table(
@@ -43,8 +42,7 @@ def add_content(table_name: str, content: str):
     """
     向 table_name 表中添加一条 content 记录
     """
-    plugin_data = get_plugin_data()
-    db_path = plugin_data.data_dir / "content.db"
+    db_path = get_plugin_data_dir() / "content.db"
     engine = create_engine(f"sqlite:///{db_path}")
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)

@@ -1,5 +1,6 @@
 import datetime
 import json
+
 from nonebot import logger
 from nonebot.adapters import Event
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
@@ -7,13 +8,14 @@ from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
 from .database import Index, create_content_list, add_content, get_id, get_entry
+from .lib import save_media
 
 @pe.assign("add")
 async def _(
     event: Event,
     session : async_scoped_session,
 
-    keyword: Match[str] = AlconnaMatch("keyword"),
+    keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     content: Match[UniMessage] = AlconnaMatch("content"),
     matchMethod: Match[str] = AlconnaMatch("matchMethod"),
     isRandom: Match[bool] = AlconnaMatch("isRandom"),
@@ -26,9 +28,15 @@ async def _(
     添加词条
     """
 
+    # 处理keyword
+    uni_keyword = UniMessage(keyword.result)
+    origin_keyword_text = uni_keyword.dump(json=True)
+    keyword_text = save_media(origin_keyword_text)
+
     # 处理content
     uni_content = UniMessage(content.result)
-    content_text = uni_content.dump(json=True)
+    origin_content_text = uni_content.dump(json=True)
+    content_text = save_media(origin_content_text)
 
     # 处理source
     session_id = event.get_session_id()
@@ -51,7 +59,7 @@ async def _(
         thescope = scope.result
 
 
-    existing_entry_id = await get_id(session, keyword.result, thescope)
+    existing_entry_id = await get_id(session, keyword_text, thescope)
     if existing_entry_id:
         existing_entry = await get_entry(session, existing_entry_id)
         # 更新已有条目（只在用户提供对应参数时修改）
@@ -86,11 +94,11 @@ async def _(
         await session.refresh(existing_entry)
 
         add_content(f"Entry_{existing_entry_id}", content_text)
-        await pe.finish(f"词条 {keyword.result} 加入了新的内容：{content_text}")
+        await pe.finish(UniMessage(f"词条 " + uni_keyword + " 加入了新的内容：" + uni_content))
     else:
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         new_entry = Index(
-            keyword=keyword.result,
+            keyword=keyword_text,
             matchMethod=matchMethod.result if matchMethod.available else "精准",
             isRandom=isRandom.result if isRandom.available else True,
             cron=cron.result if cron.available else None,
@@ -105,4 +113,4 @@ async def _(
         new_entry_id = new_entry.id
         create_content_list(f"Entry_{new_entry_id}")
         add_content(f"Entry_{new_entry_id}", content_text)
-        await pe.finish(f"词条 {keyword.result} 创建成功")
+        await pe.finish(UniMessage(f"词条 " + uni_keyword + " 已创建并加入了新的内容：" + uni_content))

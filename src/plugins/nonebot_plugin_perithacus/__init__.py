@@ -2,7 +2,7 @@ import os
 from nonebot import get_plugin_config
 from nonebot.plugin import PluginMetadata, require
 
-require("nonebot_plugin_datastore")
+require("nonebot_plugin_localstore")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_orm")
 require("nonebot_plugin_apscheduler")
@@ -12,6 +12,7 @@ from . import command
 from . import database
 from . import add
 from . import delete
+from . import lib
 
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
