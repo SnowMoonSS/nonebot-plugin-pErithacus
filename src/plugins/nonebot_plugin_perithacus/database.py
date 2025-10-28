@@ -16,7 +16,7 @@ class Index(Model):
     reg: Mapped[Optional[str]] = mapped_column(Text, default=None, comment="正则表达式")
     source: Mapped[str] = mapped_column(Text, default=None, comment="来源")
     deleted: Mapped[bool] = mapped_column(Boolean, default=False, comment="是否删除")
-    alias: Mapped[Optional[str]] = mapped_column(Text, default=None, comment="别名（数组，每个数组代表一个别名）")
+    alias: Mapped[Optional[str]] = mapped_column(Text, default=None, comment="别名（数组，每个数组代表一个别名，每个别名都是一个UniMessage对象dump出来的JSON数组）")
     dateModfied: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now, comment="词条编辑时间戳")
     dateCreate: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now, comment="词条创建时间戳")
 
@@ -65,17 +65,20 @@ async def get_id(
     - 若匹配到多条，返回 dateModfied 最新的那条的 id
     - 未命中返回 None
     """
+    # 筛选未删除的条目
     result = await session.execute(
         select(Index).where(Index.deleted == False)
     )
+    # 获取所有未删除的条目
     entries = result.scalars().all()
 
+    # 进行匹配
     matches = []
     for entry in entries:
         # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
         try:
             scope_list = json.loads(entry.scope) if entry.scope else []
-            if scope and scope not in scope_list:
+            if scope not in scope_list:
                 continue
         except json.JSONDecodeError:
             continue

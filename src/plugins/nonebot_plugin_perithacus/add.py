@@ -22,7 +22,7 @@ async def _(
     cron: Match[str] = AlconnaMatch("cron"),
     scope: Match[str] = AlconnaMatch("scope"),
     reg: Match[str] = AlconnaMatch("reg"),
-    alias: Match[str] = AlconnaMatch("alias"),
+    alias: Match[UniMessage] = AlconnaMatch("alias"),
 ):
     """
     添加词条
@@ -58,6 +58,11 @@ async def _(
             await pe.finish("scope参数必须以g或u开头")
         thescope = scope.result
 
+    # 处理alias
+    uni_alias = UniMessage(alias.result)
+    origin_alias_text = uni_alias.dump(json=True)
+    alias_text = save_media(origin_alias_text)
+
 
     existing_entry_id = await get_id(session, keyword_text, thescope)
     if existing_entry_id:
@@ -65,27 +70,25 @@ async def _(
         # 更新已有条目（只在用户提供对应参数时修改）
         if matchMethod.available:
             existing_entry.matchMethod = matchMethod.result
+
         if isRandom.available:
             existing_entry.isRandom = isRandom.result
+
         if cron.available:
             existing_entry.cron = cron.result
+
+        # 合并到已有 JSON 列表（容错解析）
         if alias.available:
-            # 支持逗号分隔的多个别名，合并到已有 JSON 列表（容错解析）
-            try:
-                alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
-            except Exception:
-                alias_list = []
-            # 把用户输入拆成多项并去重
-            if isinstance(alias.result, str):
-                new_aliases = [a.strip() for a in alias.result.split(",") if a.strip()]
-            else:
-                new_aliases = [alias.result]
-            for a in new_aliases:
-                if a and a not in alias_list:
-                    alias_list.append(a)
+            # 解析已有别名列表
+            alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
+            new_alias = alias_text
+            if new_alias and new_alias not in alias_list:
+                alias_list.append(new_alias)
             existing_entry.alias = json.dumps(alias_list) if alias_list else None
+
         if reg.available:
             existing_entry.reg = reg.result
+
         existing_entry.dateModfied=datetime.datetime.now()
 
         # 提交修改并刷新实体
@@ -105,7 +108,7 @@ async def _(
             scope=json.dumps([thescope]),
             reg=reg.result if reg.available else None,
             source=this_source,
-            alias=json.dumps([alias.result]) if alias.available else None,
+            alias=json.dumps([alias_text]) if alias.available else None,
         )
         session.add(new_entry)
         await session.commit()

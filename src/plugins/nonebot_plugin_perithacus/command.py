@@ -23,7 +23,7 @@ alc = Alconna(
         "del|删除",
         Args["keyword#词条名", str],
         Option("-s|--scope", Args["scope#作用域", str], default=""),
-        help_text="删除词条。当词条名为某词条的别名时，仅删除该别名",
+        help_text="删除词条。从作用域中删除指定的词条。未指定作用域时，删除当前会话所在的作用域。",
     ),
     Subcommand(
         "list",

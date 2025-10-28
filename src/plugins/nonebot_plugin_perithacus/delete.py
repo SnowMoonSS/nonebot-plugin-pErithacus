@@ -1,10 +1,11 @@
 import json
 from nonebot.adapters import Event
-from nonebot_plugin_alconna import AlconnaMatch, Match
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
 from .database import get_id, get_entry
+from .lib import save_media
 
 @pe.assign("del")
 async def _(
@@ -18,6 +19,12 @@ async def _(
     删除词条
     get_id，然后从scope中删除这个scope，如果删除后scope为空则标记deleted=True
     """
+
+    # 处理keyword
+    uni_keyword = UniMessage(keyword.result)
+    origin_keyword_text = uni_keyword.dump(json=True)
+    keyword_text = save_media(origin_keyword_text)
+
     # 处理source
     session_id = event.get_session_id()
     # 根据 session_id 格式设置 source 变量
@@ -38,24 +45,26 @@ async def _(
             await pe.finish("scope参数必须以g或u开头")
         thescope = scope.result
 
-    id = await get_id(session, keyword.result, thescope)
+    id = await get_id(session, keyword_text, thescope)
     if id:
         entry = await get_entry(session, id)
         scope_list = json.loads(entry.scope)
 
         if thescope in scope_list:
+            # 从scope中删除
             scope_list.remove(thescope)
+            # 更新scope字段或标记删除
             if scope_list:
                 entry.scope = json.dumps(scope_list)
                 session.add(entry)
                 await session.commit()
                 await session.refresh(entry)
-                await pe.finish(f"已从词条 {keyword.result} 中移除作用域 {thescope}，剩余作用域：{', '.join(scope_list)}")
+                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，剩余作用域：{', '.join(scope_list)}")
             else:
                 entry.deleted = True
                 session.add(entry)
                 await session.commit()
                 await session.refresh(entry)
-                await pe.finish(f"已从词条 {keyword.result} 中移除作用域 {thescope}，词条已标记为删除")
+                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，词条已标记为删除")
         else:
-            await pe.finish(f"词条 {keyword.result} 在作用域 {thescope} 中不存在")
+            await pe.finish(f"词条 " + uni_keyword + f" 在作用域 {thescope} 中不存在")
