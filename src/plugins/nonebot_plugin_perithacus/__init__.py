@@ -13,6 +13,7 @@ from . import database
 from . import add
 from . import delete
 from . import lib
+from . import list
 
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
