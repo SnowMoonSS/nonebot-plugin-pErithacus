@@ -1,6 +1,5 @@
-from sqlalchemy import String, Boolean, Text, DateTime, select, create_engine, MetaData, Table, Column, Integer
-from nonebot.adapters import Event
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from sqlalchemy import select
+from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe

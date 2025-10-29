@@ -31,7 +31,7 @@ alc = Alconna(
     ),
     Subcommand(
         "check|查看",
-        Args["keyword", str],
+        Args["id", int],
         help_text="查看指定词条的内容",
     ),
     Subcommand(

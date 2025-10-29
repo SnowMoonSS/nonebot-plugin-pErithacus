@@ -14,6 +14,7 @@ from . import add
 from . import delete
 from . import lib
 from . import list
+from . import check
 
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
