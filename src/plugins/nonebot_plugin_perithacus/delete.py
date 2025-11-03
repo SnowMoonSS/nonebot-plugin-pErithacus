@@ -5,14 +5,14 @@ from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
 from .database import get_id, get_entry
-from .lib import save_media
+from .lib import convert_media, load_media
 
 @pe.assign("del")
 async def _(
     event: Event,
     session : async_scoped_session,
 
-    keyword: Match[str] = AlconnaMatch("keyword"),
+    keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     scope: Match[str] = AlconnaMatch("scope"),
 ):
     """
@@ -21,9 +21,8 @@ async def _(
     """
 
     # 处理keyword
+    keyword_text = convert_media(keyword.result)
     uni_keyword = UniMessage(keyword.result)
-    origin_keyword_text = uni_keyword.dump(json=True)
-    keyword_text = save_media(origin_keyword_text)
 
     # 处理source
     session_id = event.get_session_id()
@@ -48,23 +47,24 @@ async def _(
     id = await get_id(session, keyword_text, thescope)
     if id:
         entry = await get_entry(session, id)
-        scope_list = json.loads(entry.scope)
-
-        if thescope in scope_list:
-            # 从scope中删除
-            scope_list.remove(thescope)
-            # 更新scope字段或标记删除
-            if scope_list:
-                entry.scope = json.dumps(scope_list)
-                session.add(entry)
-                await session.commit()
-                await session.refresh(entry)
-                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，剩余作用域：{', '.join(scope_list)}")
+        if entry:
+            scope_list = json.loads(entry.scope)
+            
+            if thescope in scope_list:
+                # 从scope中删除
+                scope_list.remove(thescope)
+                # 更新scope字段或标记删除
+                if scope_list:
+                    entry.scope = json.dumps(scope_list)
+                    session.add(entry)
+                    await session.commit()
+                    await session.refresh(entry)
+                    await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，剩余作用域：{', '.join(scope_list)}")
+                else:
+                    entry.deleted = True
+                    session.add(entry)
+                    await session.commit()
+                    await session.refresh(entry)
+                    await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，词条已标记为删除")
             else:
-                entry.deleted = True
-                session.add(entry)
-                await session.commit()
-                await session.refresh(entry)
-                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，词条已标记为删除")
-        else:
-            await pe.finish(f"词条 " + uni_keyword + f" 在作用域 {thescope} 中不存在")
+                await pe.finish(f"词条 " + uni_keyword + f" 在作用域 {thescope} 中不存在")

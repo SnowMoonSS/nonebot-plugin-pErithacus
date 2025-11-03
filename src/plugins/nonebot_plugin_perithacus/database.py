@@ -1,10 +1,14 @@
 import datetime
 import json
-from nonebot_plugin_orm import Model, async_scoped_session
+
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, Text, DateTime, select, create_engine, MetaData, Table, Column, Integer
 from typing import Optional
+
+from nonebot import logger
+from nonebot_plugin_orm import Model, async_scoped_session
 from nonebot_plugin_localstore import get_plugin_data_dir
+
 
 class Index(Model):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -108,10 +112,7 @@ async def get_id(
 
 async def get_entry(
     session : async_scoped_session,
-    id : str
-) -> Index:
+    id : int
+) -> Index | None:
     entry = await session.get(Index, id)
-    # 检查 id 是否有效。但是，我想不出为什么会无效，因为调用方已经通过 get_id 确认了 id 的存在
-    if entry is None:
-        raise ValueError(f"Entry with id {id} not found")
     return entry

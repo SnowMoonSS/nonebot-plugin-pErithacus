@@ -8,7 +8,7 @@ from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
 from .database import Index, create_content_list, add_content, get_id, get_entry
-from .lib import save_media
+from .lib import save_media, load_media
 
 @pe.assign("add")
 async def _(
@@ -29,14 +29,10 @@ async def _(
     """
 
     # 处理keyword
-    uni_keyword = UniMessage(keyword.result)
-    origin_keyword_text = uni_keyword.dump(json=True)
-    keyword_text = save_media(origin_keyword_text)
+    keyword_text = save_media(keyword.result)
 
     # 处理content
-    uni_content = UniMessage(content.result)
-    origin_content_text = uni_content.dump(json=True)
-    content_text = save_media(origin_content_text)
+    content_text = save_media(content.result)
 
     # 处理source
     session_id = event.get_session_id()
@@ -59,45 +55,47 @@ async def _(
         thescope = scope.result
 
     # 处理alias
-    uni_alias = UniMessage(alias.result)
-    origin_alias_text = uni_alias.dump(json=True)
-    alias_text = save_media(origin_alias_text)
+    alias_text = save_media(alias.result)
 
 
     existing_entry_id = await get_id(session, keyword_text, thescope)
     if existing_entry_id:
         existing_entry = await get_entry(session, existing_entry_id)
-        # 更新已有条目（只在用户提供对应参数时修改）
-        if matchMethod.available:
-            existing_entry.matchMethod = matchMethod.result
+        if existing_entry:
+            # 更新已有条目（只在用户提供对应参数时修改）
+            if matchMethod.available:
+                existing_entry.matchMethod = matchMethod.result
 
-        if isRandom.available:
-            existing_entry.isRandom = isRandom.result
+            if isRandom.available:
+                existing_entry.isRandom = isRandom.result
 
-        if cron.available:
-            existing_entry.cron = cron.result
+            if cron.available:
+                existing_entry.cron = cron.result
 
-        # 合并到已有 JSON 列表（容错解析）
-        if alias.available:
-            # 解析已有别名列表
-            alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
-            new_alias = alias_text
-            if new_alias and new_alias not in alias_list:
-                alias_list.append(new_alias)
-            existing_entry.alias = json.dumps(alias_list) if alias_list else None
+            # 合并到已有 JSON 列表（容错解析）
+            if alias.available:
+                # 解析已有别名列表
+                alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
+                new_alias = alias_text
+                if new_alias and new_alias not in alias_list:
+                    alias_list.append(new_alias)
+                existing_entry.alias = json.dumps(alias_list) if alias_list else None
 
-        if reg.available:
-            existing_entry.reg = reg.result
+            if reg.available:
+                existing_entry.reg = reg.result
 
-        existing_entry.dateModfied=datetime.datetime.now()
+            existing_entry.dateModfied=datetime.datetime.now()
 
-        # 提交修改并刷新实体
-        session.add(existing_entry)
-        await session.commit()
-        await session.refresh(existing_entry)
+            # 提交修改并刷新实体
+            session.add(existing_entry)
+            await session.commit()
+            await session.refresh(existing_entry)
 
-        add_content(f"Entry_{existing_entry_id}", content_text)
-        await pe.finish(UniMessage(f"词条 " + uni_keyword + " 加入了新的内容：" + uni_content))
+            add_content(f"Entry_{existing_entry_id}", content_text)
+
+            uni_keyword = load_media(existing_entry.keyword)
+            uni_content = load_media(content_text)
+            await pe.finish(UniMessage("词条：" + uni_keyword + "加入了新的内容：" + uni_content))
     else:
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         new_entry = Index(
@@ -116,4 +114,7 @@ async def _(
         new_entry_id = new_entry.id
         create_content_list(f"Entry_{new_entry_id}")
         add_content(f"Entry_{new_entry_id}", content_text)
-        await pe.finish(UniMessage(f"词条 " + uni_keyword + " 已创建并加入了新的内容：" + uni_content))
+
+        uni_keyword = load_media(keyword_text)
+        uni_content = load_media(content_text)
+        await pe.finish(UniMessage("词条：" + uni_keyword + "已创建并加入了新的内容：" + uni_content))

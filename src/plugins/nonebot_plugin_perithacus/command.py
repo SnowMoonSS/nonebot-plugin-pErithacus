@@ -30,14 +30,21 @@ alc = Alconna(
         help_text="查看所有词条",
     ),
     Subcommand(
-        "check|查看",
-        Args["id", int],
-        help_text="查看指定词条的内容",
-    ),
-    Subcommand(
         "search|搜索",
         Args["keyword", str],
         help_text="搜索词条",
+    ),
+    Subcommand(
+        "check|查看",
+        Args["id", int],
+        Option("-f|--force", Args["force#强制显示已删除词条", bool], default=False),
+        help_text="查看指定词条的的配置",
+    ),
+    Subcommand(
+        "detail|详情",
+        Args["id", int],
+        Option("-f|--force", Args["force#强制显示已删除词条", bool], default=False),
+        help_text="查看指定词条的详细内容",
     ),
     Subcommand(
         "edit|修改",
