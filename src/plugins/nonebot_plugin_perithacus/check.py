@@ -3,8 +3,8 @@ from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 
 from .command import pe
-from .database import Index, create_content_list, add_content, get_id, get_entry_by_id
-from .lib import convert_media, load_media
+from .database import get_entry_by_id
+from .lib import load_media
 
 @pe.assign("check")
 async def _(

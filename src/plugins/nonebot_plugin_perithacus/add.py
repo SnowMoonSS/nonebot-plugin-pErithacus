@@ -1,13 +1,12 @@
 import datetime
 import json
 
-from nonebot import logger
 from nonebot.adapters import Event
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
-from .database import Index, create_content_list, add_content, get_id, get_entry
+from .database import Index, create_content_list, add_content, get_entry
 from .lib import save_media, load_media
 
 @pe.assign("add")

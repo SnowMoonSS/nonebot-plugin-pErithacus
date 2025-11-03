@@ -2,9 +2,8 @@ import os
 import requests
 import json
 
-from nonebot import logger
 from nonebot_plugin_localstore import get_plugin_data_dir
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_alconna import UniMessage
 
 def save_media(data: UniMessage) -> str:
     """

@@ -4,8 +4,8 @@ from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
-from .database import get_id, get_entry
-from .lib import convert_media, load_media
+from .database import get_entry
+from .lib import convert_media
 
 @pe.assign("del")
 async def _(
