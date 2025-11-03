@@ -109,9 +109,8 @@ async def _(
         session.add(new_entry)
         await session.commit()
         await session.refresh(new_entry)
-        new_entry_id = new_entry.id
-        create_content_list(f"Entry_{new_entry_id}")
-        add_content(f"Entry_{new_entry_id}", content_text)
+        create_content_list(f"Entry_{new_entry.id}")
+        add_content(f"Entry_{new_entry.id}", content_text)
 
         uni_keyword = load_media(keyword_text)
         uni_content = load_media(content_text)
