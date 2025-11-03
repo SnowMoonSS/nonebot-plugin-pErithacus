@@ -112,6 +112,60 @@ async def get_id(
 
 async def get_entry(
     session : async_scoped_session,
+    keyword : str,
+    scope : str,
+) -> Index | None:
+    """
+    返回匹配 keyword 且在 scope 中（如果 scope 非空）的词条 id。
+    - 先筛选未删除的条目
+    - 再按 scope 过滤（scope 字段为 JSON 数组）
+    - 检查 keyword 是否为主 keyword 或出现在 alias（JSON 数组）中
+    - 若匹配到多条，返回 dateModfied 最新的那条的 id
+    - 未命中返回 None
+    """
+    # 筛选未删除的条目
+    result = await session.execute(
+        select(Index).where(Index.deleted == False)
+    )
+    # 获取所有未删除的条目
+    entries = result.scalars().all()
+
+    # 进行匹配
+    matches = []
+    for entry in entries:
+        # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
+        try:
+            scope_list = json.loads(entry.scope) if entry.scope else []
+            if scope not in scope_list:
+                continue
+        except json.JSONDecodeError:
+            continue
+
+        # 直接匹配 keyword
+        if entry.keyword == keyword:
+            matches.append(entry)
+            continue
+
+        # 检查 alias（JSON）
+        try:
+            alias_list = json.loads(entry.alias) if entry.alias else []
+            if keyword in alias_list:
+                matches.append(entry)
+        except json.JSONDecodeError:
+            pass
+
+    if not matches:
+        return None
+
+    if len(matches) == 1:
+        return matches[0]
+
+    # 多条时按 dateModfied 最新的返回
+    best = max(matches, key=lambda e: e.dateModfied or e.dateCreate or datetime.datetime.min)
+    return best
+
+async def get_entry_by_id(
+    session : async_scoped_session,
     id : int
 ) -> Index | None:
     entry = await session.get(Index, id)

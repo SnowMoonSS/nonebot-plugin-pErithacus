@@ -58,44 +58,42 @@ async def _(
     alias_text = save_media(alias.result)
 
 
-    existing_entry_id = await get_id(session, keyword_text, thescope)
-    if existing_entry_id:
-        existing_entry = await get_entry(session, existing_entry_id)
-        if existing_entry:
-            # 更新已有条目（只在用户提供对应参数时修改）
-            if matchMethod.available:
-                existing_entry.matchMethod = matchMethod.result
+    existing_entry = await get_entry(session, keyword_text, thescope)
+    if existing_entry:
+        # 更新已有条目（只在用户提供对应参数时修改）
+        if matchMethod.available:
+            existing_entry.matchMethod = matchMethod.result
 
-            if isRandom.available:
-                existing_entry.isRandom = isRandom.result
+        if isRandom.available:
+            existing_entry.isRandom = isRandom.result
 
-            if cron.available:
-                existing_entry.cron = cron.result
+        if cron.available:
+            existing_entry.cron = cron.result
 
-            # 合并到已有 JSON 列表（容错解析）
-            if alias.available:
-                # 解析已有别名列表
-                alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
-                new_alias = alias_text
-                if new_alias and new_alias not in alias_list:
-                    alias_list.append(new_alias)
-                existing_entry.alias = json.dumps(alias_list) if alias_list else None
+        # 合并到已有 JSON 列表（容错解析）
+        if alias.available:
+            # 解析已有别名列表
+            alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
+            new_alias = alias_text
+            if new_alias and new_alias not in alias_list:
+                alias_list.append(new_alias)
+            existing_entry.alias = json.dumps(alias_list) if alias_list else None
 
-            if reg.available:
-                existing_entry.reg = reg.result
+        if reg.available:
+            existing_entry.reg = reg.result
 
-            existing_entry.dateModfied=datetime.datetime.now()
+        existing_entry.dateModfied=datetime.datetime.now()
 
-            # 提交修改并刷新实体
-            session.add(existing_entry)
-            await session.commit()
-            await session.refresh(existing_entry)
+        # 提交修改并刷新实体
+        session.add(existing_entry)
+        await session.commit()
+        await session.refresh(existing_entry)
 
-            add_content(f"Entry_{existing_entry_id}", content_text)
+        add_content(f"Entry_{existing_entry.id}", content_text)
 
-            uni_keyword = load_media(existing_entry.keyword)
-            uni_content = load_media(content_text)
-            await pe.finish(UniMessage("词条：" + uni_keyword + "加入了新的内容：" + uni_content))
+        uni_keyword = load_media(existing_entry.keyword)
+        uni_content = load_media(content_text)
+        await pe.finish(UniMessage("词条：" + uni_keyword + "加入了新的内容：" + uni_content))
     else:
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         new_entry = Index(
