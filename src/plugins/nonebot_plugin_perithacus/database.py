@@ -60,7 +60,7 @@ async def get_contents(id: int):
     """
     返回 table_name 表中的所有 content
     """
-    table_name = f"content_{id}"
+    table_name = f"Entry_{id}"
     db_path = get_plugin_data_dir() / "content.db"
     engine = create_engine(f"sqlite:///{db_path}")
     metadata = MetaData()
@@ -70,7 +70,6 @@ async def get_contents(id: int):
         rows = result.fetchall()
     engine.dispose()
     return rows
-
 
 async def get_id(
     session : async_scoped_session,

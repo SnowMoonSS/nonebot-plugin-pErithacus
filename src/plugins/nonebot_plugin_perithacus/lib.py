@@ -31,7 +31,7 @@ def save_media(data: UniMessage) -> str:
                 if not os.path.exists(file_path):
                     with open(file_path, 'wb') as file:
                         file.write(response.content)
-                # 添加 path 字段
+                # 标记为 media
                 item['media'] = True
                 # 删除url字段
                 del item['url']
@@ -49,12 +49,12 @@ def load_media(data: str) -> UniMessage:
 
     loadded_data = json.loads(data)
     for item in loadded_data:
-        if 'media' in item and item['media']:
-            item['path'] = media_save_dir / os.path.splitext(item['id'])[0]
+        if item.get('media'):
+            item['path'] = str(media_save_dir / os.path.splitext(item['id'])[0])
             del item['media']
 
     dumped_data = json.dumps(loadded_data, ensure_ascii=False)
-    return UniMessage(dumped_data)
+    return UniMessage.load(dumped_data)
 
 def convert_media(data: UniMessage) -> str:
     """

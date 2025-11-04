@@ -111,6 +111,6 @@ async def _(
         create_content_list(f"Entry_{new_entry.id}")
         add_content(f"Entry_{new_entry.id}", content_text)
 
-        uni_keyword = load_media(keyword_text)
+        uni_keyword = load_media(new_entry.keyword)
         uni_content = load_media(content_text)
         await pe.finish(UniMessage("词条：" + uni_keyword + "已创建并加入了新的内容：" + uni_content))
