@@ -56,6 +56,22 @@ def add_content(table_name: str, content: str):
         conn.commit()
     engine.dispose()
 
+async def get_contents(id: int):
+    """
+    返回 table_name 表中的所有 content
+    """
+    table_name = f"content_{id}"
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=engine)
+    with engine.connect() as conn:
+        result = conn.execute(select(table))
+        rows = result.fetchall()
+    engine.dispose()
+    return rows
+
+
 async def get_id(
     session : async_scoped_session,
     keyword : str,
