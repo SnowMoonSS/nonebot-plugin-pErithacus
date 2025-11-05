@@ -28,10 +28,10 @@ async def _(
     """
 
     # 处理keyword
-    keyword_text = save_media(keyword.result)
+    keyword_text = await save_media(keyword.result)
 
     # 处理content
-    content_text = save_media(content.result)
+    content_text = await save_media(content.result)
 
     # 处理source
     session_id = event.get_session_id()

@@ -5,7 +5,7 @@ import json
 from nonebot_plugin_localstore import get_plugin_data_dir
 from nonebot_plugin_alconna import UniMessage
 
-def save_media(data: UniMessage) -> str:
+async def save_media(data: UniMessage) -> str:
     """
     保存媒体文件
     输入解析得到的元组，返回处理后的JSON数组

@@ -66,13 +66,6 @@ alc = Alconna(
         ),
         help_text="修改词条",
     ),
-    Subcommand(
-        "test",
-        Args(
-            Arg("content", MultiVar(Any), notice="测试"),
-        ),
-        help_text="测试匹配",
-        ),
     meta=CommandMeta(
         keep_crlf=True,
     )
