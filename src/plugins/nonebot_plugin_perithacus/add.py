@@ -54,7 +54,7 @@ async def _(
         thescope = scope.result
 
     # 处理alias
-    alias_text = save_media(alias.result)
+    alias_text = await save_media(alias.result)
 
 
     existing_entry = await get_entry(session, keyword_text, thescope)

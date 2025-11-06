@@ -31,19 +31,19 @@ alc = Alconna(
     ),
     Subcommand(
         "search|搜索",
-        Args["keyword", str],
+        Args["keyword", Any],
         help_text="搜索词条",
     ),
     Subcommand(
         "check|查看",
         Args["id", int],
-        Option("-f|--force", Args["force#强制显示已删除词条", bool], default=False),
+        Option("-f|--force"),
         help_text="查看指定词条的的配置",
     ),
     Subcommand(
         "detail|详情",
         Args["id", int],
-        Option("-f|--force", Args["force#强制显示已删除词条", bool], default=False),
+        Option("-f|--force"),
         help_text="查看指定词条的详细内容",
     ),
     Subcommand(
@@ -55,13 +55,14 @@ alc = Alconna(
         Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域群号", int], default=""),
+        Option("-R|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
         Option("-a|--alias", Args["alias#为词条添加别名", list], default=""),
         Option("-d|--delete", Args["id", int], default=0, help_text="删除指定id的回复"),
         Option(
             "-R|--replace",
             Args(
                 Arg("id", int, notice="将被替换的内容编号"),
-                Arg("content", str, notice="要替换的内容"),
+                Arg("content", MultiVar(Any), notice="要替换的内容"),
             ),
         ),
         help_text="修改词条",

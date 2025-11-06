@@ -13,7 +13,6 @@ from .lib import convert_media, load_media
 
 @pe.assign("search")
 async def _(
-    event: Event,
     session : async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),

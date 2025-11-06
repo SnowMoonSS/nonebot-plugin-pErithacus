@@ -1,6 +1,6 @@
 import json
 from nonebot_plugin_orm import async_scoped_session
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Query, AlconnaQuery
 
 from .command import pe
 from .database import get_entry_by_id
@@ -11,7 +11,7 @@ async def _(
     session : async_scoped_session,
     
     id: Match[int] = AlconnaMatch("id"),
-    force: Match[bool] = AlconnaMatch("force"),
+    force: Query[bool] = AlconnaQuery("force", False),
 ):
     """查看词条配置"""
 
@@ -26,7 +26,7 @@ async def _(
                 for alias in aliases_json:
                     aliases.append(load_media(alias))
                 
-                await pe.finish(f"序号：{entry.id}\n" + 
+                await pe.finish(f"编号：{entry.id}\n" + 
                                 f"词条名：" + keyword + "\n" + 
                                 f"匹配方式：{entry.matchMethod}\n" +
                                 f"随机：{entry.isRandom}\n" +
@@ -41,7 +41,7 @@ async def _(
                                 )
             else:
                 aliases = None
-                await pe.finish(f"序号：{entry.id}\n" + 
+                await pe.finish(f"编号：{entry.id}\n" + 
                                 f"词条名：" + keyword + "\n" + 
                                 f"匹配方式：{entry.matchMethod}\n" +
                                 f"随机：{entry.isRandom}\n" +

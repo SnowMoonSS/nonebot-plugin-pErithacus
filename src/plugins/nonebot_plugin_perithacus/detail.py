@@ -1,6 +1,6 @@
 from nonebot_plugin_orm import async_scoped_session
 from nonebot.adapters import Event
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Query, AlconnaQuery
 
 from .command import pe
 from .database import get_entry_by_id, get_contents
@@ -11,7 +11,7 @@ async def _(
     session : async_scoped_session,
     
     id: Match[int] = AlconnaMatch("id"),
-    force: Match[bool] = AlconnaMatch("force"),
+    force: Query[bool] = AlconnaQuery("force", False),
 ):
     entry = await get_entry_by_id(session, id.result)
     if entry:

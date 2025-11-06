@@ -185,3 +185,37 @@ async def get_entry_by_id(
 ) -> Index | None:
     entry = await session.get(Index, id)
     return entry
+
+async def delete_content(table_id: int, id: int):
+    """
+    删除 table_id 表中的 id 记录
+    """
+    table_name = f"Entry_{table_id}"
+
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=engine)
+    with engine.connect() as conn:
+        delete_stmt = table.delete().where(table.c.id == id)
+        result = conn.execute(delete_stmt)
+        conn.commit()
+    engine.dispose()
+    return result.rowcount > 0
+
+async def replace_content(table_id: int, id: int, new_content: str):
+    """
+    替换 table_id 表中的 id 记录的 content 为 new_content
+    """
+    table_name = f"Entry_{table_id}"
+
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=engine)
+    with engine.connect() as conn:
+        update_stmt = table.update().where(table.c.id == id).values(content=new_content, timap=datetime.datetime.now())
+        result = conn.execute(update_stmt)
+        conn.commit()
+    engine.dispose()
+    return result.rowcount > 0
