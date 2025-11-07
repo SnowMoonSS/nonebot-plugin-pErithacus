@@ -30,9 +30,9 @@ async def _(
         # {userid} 格式，直接使用 userid
         user_id = session_id
         this_source = f"u{user_id}"
-    scope = this_source
+    scope_list = [this_source]
 
-    existing_entry = await get_entry(session, msg_text, scope)
+    existing_entry = await get_entry(session, msg_text, scope_list)
     if existing_entry:
         contents = await get_contents(existing_entry.id)
         if existing_entry.isRandom:

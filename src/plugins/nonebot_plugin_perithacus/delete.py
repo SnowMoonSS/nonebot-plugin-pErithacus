@@ -38,31 +38,32 @@ async def _(
     
     # 处理scope
     if not scope.available:
-        thescope = this_source
+        scope_list = [this_source]
     else:
-        if not (scope.result.startswith("g") or scope.result.startswith("u")):
-            await pe.finish("scope参数必须以g或u开头")
-        thescope = scope.result
+        scope_list = scope.result.split(",")
+        for s in scope_list:
+            if not (scope.result.startswith("g") or scope.result.startswith("u")):
+                await pe.finish("scope参数必须以g或u开头")
 
-    entry = await get_entry(session, keyword_text, thescope)
+    entry = await get_entry(session, keyword_text, scope_list)
     if entry:
-        scope_list = json.loads(entry.scope)
+        scope_list_from_db = json.loads(entry.scope)
         
-        if thescope in scope_list:
+        if any(item in scope_list_from_db for item in scope_list):
             # 从scope中删除
-            scope_list.remove(thescope)
+            scope_list_from_db = [item for item in scope_list_from_db if item not in scope_list]
             # 更新scope字段或标记删除
-            if scope_list:
+            if scope_list_from_db:
                 entry.scope = json.dumps(scope_list)
                 session.add(entry)
                 await session.commit()
                 await session.refresh(entry)
-                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，剩余作用域：{', '.join(scope_list)}")
+                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {str(scope_list)}，剩余作用域：{str(scope_list_from_db)}")
             else:
                 entry.deleted = True
                 session.add(entry)
                 await session.commit()
                 await session.refresh(entry)
-                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {thescope}，词条已标记为删除")
+                await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {str(scope_list)}，词条已标记为删除")
         else:
-            await pe.finish(f"词条 " + uni_keyword + f" 在作用域 {thescope} 中不存在")
+            await pe.finish(f"词条 " + uni_keyword + f" 在作用域 {str(scope_list)} 中不存在")

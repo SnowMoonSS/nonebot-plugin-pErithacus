@@ -46,17 +46,18 @@ async def _(
     
     # 处理scope
     if not scope.available:
-        thescope = this_source
+        scope_list = [this_source]
     else:
-        if not (scope.result.startswith("g") or scope.result.startswith("u")):
-            await pe.finish("scope参数必须以g或u开头")
-        thescope = scope.result
+        scope_list = scope.result.split(",")
+        for s in scope_list:
+            if not (scope.result.startswith("g") or scope.result.startswith("u")):
+                await pe.finish("scope参数必须以g或u开头")
 
     # 处理alias
     alias_text = convert_media(alias.result)
 
 
-    existing_entry = await get_entry(session, keyword_text, thescope)
+    existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
         # 更新已有条目（只在用户提供对应参数时修改）
         if matchMethod.available:
@@ -67,6 +68,16 @@ async def _(
 
         if cron.available:
             existing_entry.cron = cron.result
+
+        if scope.available:
+            # 合并到已有 JSON 列表（容错解析）
+            try:
+                scope_list_from_db = json.loads(existing_entry.scope) if existing_entry.scope else []
+            except json.JSONDecodeError:
+                scope_list_from_db = []
+            if not any(item in scope_list_from_db for item in scope_list):
+                scope_list_from_db.extend(scope_list)
+            existing_entry.scope = json.dumps(scope_list_from_db)
 
         # 合并到已有 JSON 列表（容错解析）
         if alias.available:

@@ -132,7 +132,7 @@ async def get_id(
 async def get_entry(
     session : async_scoped_session,
     keyword : str,
-    scope : str,
+    scope_list : list[str],
 ) -> Index | None:
     """
     返回匹配 keyword 且在 scope 中（如果 scope 非空）的词条 id。
@@ -154,8 +154,8 @@ async def get_entry(
     for entry in entries:
         # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
         try:
-            scope_list = json.loads(entry.scope) if entry.scope else []
-            if scope not in scope_list:
+            scope_list_from_db = json.loads(entry.scope) if entry.scope else []
+            if not any(item in scope_list_from_db for item in scope_list):
                 continue
         except json.JSONDecodeError:
             continue
