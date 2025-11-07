@@ -12,6 +12,7 @@ async def save_media(data: UniMessage) -> str:
     """
 
     media_save_dir = get_plugin_data_dir() / "media"
+    media_save_dir.mkdir(parents=True, exist_ok=True)
 
     # 将解析得到的元组转换成UniMessage对象
     uni_data = UniMessage(data)
@@ -62,6 +63,20 @@ def convert_media(data: UniMessage) -> str:
     """
     uni_data = UniMessage(data)
     dumped_uni_data = uni_data.dump(json=True)
+    loaded_data = json.loads(dumped_uni_data)
+    for item in loaded_data:
+        if 'url' in item:
+            del item['url']
+            item['media'] = True
+    
+    dumped_data = json.dumps(loaded_data, ensure_ascii=False)
+    return dumped_data
+
+def uni_message_to_dumpped_data(data: UniMessage) -> str:
+    """
+    将 UniMessage 转换为 JSON 数组字符串
+    """
+    dumped_uni_data = data.dump(json=True)
     loaded_data = json.loads(dumped_uni_data)
     for item in loaded_data:
         if 'url' in item:

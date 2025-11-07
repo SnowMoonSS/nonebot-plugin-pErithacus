@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, Text, DateTime, select, create_engine, MetaData, Table, Column, Integer
@@ -8,6 +9,9 @@ from typing import Optional
 from nonebot import logger
 from nonebot_plugin_orm import Model, async_scoped_session
 from nonebot_plugin_localstore import get_plugin_data_dir
+from nonebot_plugin_alconna import UniMessage, Text as AlconnaText
+
+from .lib import load_media
 
 
 class Index(Model):
@@ -160,6 +164,12 @@ async def get_entry(
         if entry.keyword == keyword:
             matches.append(entry)
             continue
+
+        # 检查正则表达式
+        if entry.reg and UniMessage(load_media(keyword)).only(AlconnaText):
+            key = load_media(keyword).extract_plain_text()
+            if re.match(entry.reg, key):
+                matches.append(entry)
 
         # 检查 alias（JSON）
         try:

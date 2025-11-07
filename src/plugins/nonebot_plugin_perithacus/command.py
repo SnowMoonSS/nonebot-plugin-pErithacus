@@ -1,9 +1,10 @@
 from arclet.alconna import Alconna, Arg, Args, Subcommand, Option, CommandMeta, MultiVar
+from nonebot import on_message
 from nonebot_plugin_alconna import on_alconna
 from nonebot_plugin_alconna.uniseg import Image, Text, At, UniMessage
 from nepattern import Any
 
-alc = Alconna(
+perithacus = Alconna(
     "perithacus",
     Subcommand(
         "add|添加",
@@ -71,8 +72,11 @@ alc = Alconna(
         keep_crlf=True,
     )
 )
-pe = on_alconna(alc, skip_for_unmatch=False, use_cmd_start=True, aliases={"pe"})
+pe = on_alconna(perithacus, skip_for_unmatch=False, use_cmd_start=True, aliases={"pe"})
 
 @pe.assign("$main")
 async def handle_main():
     await pe.finish("发送“pe --help”查看帮助")
+
+
+all = on_message()
