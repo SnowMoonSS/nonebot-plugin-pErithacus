@@ -2,7 +2,7 @@ import random
 
 from nonebot.log import logger
 from nonebot.adapters import Event
-from nonebot_plugin_alconna import UniMessage
+from nonebot_plugin_alconna import UniMessage, UniMsg
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import all
@@ -13,8 +13,8 @@ from .database import get_entry, get_contents
 async def _(
     event: Event,
     session : async_scoped_session,
+    msg: UniMsg,
 ):
-    msg = UniMessage.of(event.get_message())
     msg_text = uni_message_to_dumpped_data(msg)
 
     # 处理source
@@ -41,7 +41,7 @@ async def _(
             content = max(contents, key=lambda x: x.timap)
             logger.debug(f"选择最新内容 ID {content.id} 进行发送")
         send = await UniMessage.export(load_media(content.content))
-        await all.finish(send)
+        await UniMessage.finish(load_media(content.content))
     else:
-        logger.debug("未找到匹配的词条")
+        logger.debug("Trigger 未找到匹配的词条")
         await all.finish()

@@ -51,7 +51,7 @@ async def _(
     else:
         scope_list = scope.result.split(",")
         for s in scope_list:
-            if not (scope.result.startswith("g") or scope.result.startswith("u")):
+            if not (s.startswith("g") or s.startswith("u")):
                 await pe.finish("scope参数必须以g或u开头")
 
     # 处理alias
@@ -92,7 +92,7 @@ async def _(
         if reg.available:
             existing_entry.reg = reg.result
 
-        existing_entry.dateModfied=datetime.datetime.now()
+        existing_entry.dateModified=datetime.datetime.now()
 
         # 提交修改并刷新实体
         session.add(existing_entry)
@@ -103,7 +103,7 @@ async def _(
 
         uni_keyword = load_media(existing_entry.keyword)
         uni_content = load_media(content_text)
-        await pe.finish(UniMessage("词条：" + uni_keyword + "加入了新的内容：" + uni_content))
+        await pe.finish("词条：" + uni_keyword + f" 加入了新的内容，编号为：{existing_entry.id}")
     else:
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         new_entry = Index(
@@ -124,4 +124,4 @@ async def _(
 
         uni_keyword = load_media(new_entry.keyword)
         uni_content = load_media(content_text)
-        await pe.finish(UniMessage("词条：" + uni_keyword + "已创建并加入了新的内容：" + uni_content))
+        await pe.finish("词条：" + uni_keyword + " 已创建并加入了新的内容")

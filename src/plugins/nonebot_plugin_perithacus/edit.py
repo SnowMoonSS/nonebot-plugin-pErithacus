@@ -2,7 +2,7 @@ import datetime
 import json
 
 from nonebot.adapters import Event
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Query, AlconnaQuery
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
@@ -21,9 +21,9 @@ async def _(
     scope: Match[str] = AlconnaMatch("scope"),
     reg: Match[str] = AlconnaMatch("reg"),
     alias: Match[UniMessage] = AlconnaMatch("alias"),
-    delete_id: Query[int] = AlconnaQuery("delete.id", 0),
-    replace_id: Query[int] = AlconnaQuery("replace.id", 0),
-    content: Query[UniMessage] = AlconnaQuery("replace.content", UniMessage()),
+    delete_id: Match[int] = AlconnaMatch("delete_id"),
+    replace_id: Match[int] = AlconnaMatch("replace_id"),
+    content: Match[UniMessage] = AlconnaMatch("content"),
 ):
     """
     修改词条
@@ -50,7 +50,7 @@ async def _(
     else:
         scope_list = scope.result.split(",")
         for s in scope_list:
-            if not (scope.result.startswith("g") or scope.result.startswith("u")):
+            if not (s.startswith("g") or s.startswith("u")):
                 await pe.finish("scope参数必须以g或u开头")
 
     # 处理alias
@@ -91,29 +91,31 @@ async def _(
         if reg.available:
             existing_entry.reg = reg.result
 
-        existing_entry.dateModfied=datetime.datetime.now()
+        existing_entry.dateModified=datetime.datetime.now()
 
         # 提交修改并刷新实体
         session.add(existing_entry)
         await session.commit()
         await session.refresh(existing_entry)
+        msg = UniMessage("词条：" + UniMessage(keyword.result) + " 修改成功！")
 
         if delete_id.available:
             # 删除指定的内容
-            try:
-                await delete_content(existing_entry.id, delete_id.result)
-            except:
-                await pe.finish("删除内容失败，请检查内容编号是否正确")
+            result = await delete_content(existing_entry.id, delete_id.result)
+            if result:
+                msg.append("删除内容成功！")
+            else:
+                msg.append("删除内容失败，请检查内容编号是否正确")
         
         if replace_id.available and content.available:
             # 替换指定的内容
-            try:
-                content_text = await save_media(replace_content.result)
-                await replace_content(existing_entry.id, replace_id.result, content_text)
-                await pe.finish("替换内容成功")
-            except:
-                await pe.finish("替换内容失败，请检查内容编号是否正确")
+            content_text = await save_media(content.result)
+            result = await replace_content(existing_entry.id, replace_id.result, content_text)
+            if result:
+                msg.append("替换内容成功！")
+            else:
+                msg.append("替换内容失败，请检查内容编号是否正确")
         
-        await pe.finish("修改词条成功")
+        await pe.finish(msg)
     else:
         await pe.finish("词条 " + UniMessage(keyword.result) + " 不存在")

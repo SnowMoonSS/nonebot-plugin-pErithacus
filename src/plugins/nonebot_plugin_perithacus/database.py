@@ -25,7 +25,7 @@ class Index(Model):
     source: Mapped[str] = mapped_column(Text, default=None, comment="来源")
     deleted: Mapped[bool] = mapped_column(Boolean, default=False, comment="是否删除")
     alias: Mapped[Optional[str]] = mapped_column(Text, default=None, comment="别名（数组，每个数组代表一个别名，每个别名都是一个UniMessage对象dump出来的JSON数组）")
-    dateModfied: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now, comment="词条编辑时间戳")
+    dateModified: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now, comment="词条编辑时间戳")
     dateCreate: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now, comment="词条创建时间戳")
 
 def create_content_list(table_name: str):
@@ -85,7 +85,7 @@ async def get_id(
     - 先筛选未删除的条目
     - 再按 scope 过滤（scope 字段为 JSON 数组）
     - 检查 keyword 是否为主 keyword 或出现在 alias（JSON 数组）中
-    - 若匹配到多条，返回 dateModfied 最新的那条的 id
+    - 若匹配到多条，返回 dateModified 最新的那条的 id
     - 未命中返回 None
     """
     # 筛选未删除的条目
@@ -125,8 +125,8 @@ async def get_id(
     if len(matches) == 1:
         return matches[0].id
 
-    # 多条时按 dateModfied 最新的返回
-    best = max(matches, key=lambda e: e.dateModfied or e.dateCreate or datetime.datetime.min)
+    # 多条时按 dateModified 最新的返回
+    best = max(matches, key=lambda e: e.dateModified or e.dateCreate or datetime.datetime.min)
     return best.id
 
 async def get_entry(
@@ -189,8 +189,8 @@ async def get_entry(
     if len(matches) == 1:
         return matches[0]
 
-    # 多条时按 dateModfied 最新的返回
-    best = max(matches, key=lambda e: e.dateModfied or e.dateCreate or datetime.datetime.min)
+    # 多条时按 dateModified 最新的返回
+    best = max(matches, key=lambda e: e.dateModified or e.dateCreate or datetime.datetime.min)
     return best
 
 async def get_entry_by_id(
