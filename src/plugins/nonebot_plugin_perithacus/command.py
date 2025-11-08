@@ -27,22 +27,23 @@ perithacus = Alconna(
     ),
     Subcommand(
         "list",
-        help_text="查看所有词条",
+        Arg("entry_id?", int, notice="列出指定 ID 的词条内容"),
+        help_text="列出词条",
     ),
     Subcommand(
         "search|搜索",
-        Args["keyword", Any],
+        Arg("keyword", Any, notice="关键词"),
         help_text="搜索词条",
     ),
     Subcommand(
         "check|查看",
-        Args["id", int],
+        Arg("id", int, notice="词条ID"),
         Option("-f|--force"),
         help_text="查看指定词条的的配置",
     ),
     Subcommand(
         "detail|详情",
-        Args["id", int],
+        Arg("id", int, notice="词条ID"),
         Option("-f|--force"),
         help_text="查看指定词条的详细内容",
     ),

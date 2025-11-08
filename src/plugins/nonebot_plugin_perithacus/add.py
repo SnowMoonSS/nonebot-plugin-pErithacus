@@ -124,4 +124,4 @@ async def _(
 
         uni_keyword = load_media(new_entry.keyword)
         uni_content = load_media(content_text)
-        await pe.finish("词条：" + uni_keyword + " 已创建并加入了新的内容")
+        await pe.finish("词条：" + uni_keyword + f" 已创建并加入了新的内容，编号为：{new_entry.id}")

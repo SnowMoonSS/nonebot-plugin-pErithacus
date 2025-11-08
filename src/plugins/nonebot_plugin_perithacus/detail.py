@@ -18,7 +18,7 @@ async def _(
             msg = UniMessage("词条" + load_media(entry.keyword) + "的内容如下：\n")
             rows = await get_contents(id.result)
             for row in rows:
-                msg.extend(f"{id.result}　" + load_media(row.content) + f"　时间: {row.timap}\n")
+                msg.extend(f"{row.result}　" + load_media(row.content) + f"　时间: {row.timap}\n")
             await pe.finish(msg)
         elif not force.available and entry.deleted:
             await pe.finish("请输入有效的词条 ID 。使用 search 或 list 命令查看词条列表。")
