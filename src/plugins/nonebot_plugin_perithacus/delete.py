@@ -65,5 +65,5 @@ async def _(
                 await session.commit()
                 await session.refresh(entry)
                 await pe.finish("已从词条 " + uni_keyword + f" 中移除作用域 {str(scope_list)}，词条已标记为删除")
-        else:
-            await pe.finish(f"词条 " + uni_keyword + f" 在作用域 {str(scope_list)} 中不存在")
+    else:
+        await pe.finish(f"词条 " + uni_keyword + f" 在作用域 {str(scope_list)} 中不存在")

@@ -6,8 +6,8 @@ from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Query, Alcon
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
-from .database import Index, create_content_list, add_content, get_entry, delete_content, replace_content
-from .lib import save_media, load_media, convert_media
+from .database import get_entry, delete_content, replace_content
+from .lib import save_media, convert_media
 
 @pe.assign("edit")
 async def _(
@@ -69,8 +69,8 @@ async def _(
         if cron.available:
             existing_entry.cron = cron.result
 
+        # 合并到已有 JSON 列表
         if scope.available:
-            # 合并到已有 JSON 列表（容错解析）
             try:
                 scope_list_from_db = json.loads(existing_entry.scope) if existing_entry.scope else []
             except json.JSONDecodeError:
@@ -79,7 +79,7 @@ async def _(
                 scope_list_from_db.extend(scope_list)
             existing_entry.scope = json.dumps(scope_list_from_db)
 
-        # 合并到已有 JSON 列表（容错解析）
+        # 合并到已有 JSON 列表
         if alias.available:
             # 解析已有别名列表
             alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []

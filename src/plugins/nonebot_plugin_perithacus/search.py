@@ -4,13 +4,12 @@ import sqlite3
 
 from sqlalchemy import select
 from nonebot_plugin_orm import async_scoped_session
-from nonebot.adapters import Event
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 from .command import pe
 from .database import Index
-from .lib import convert_media, load_media
+from .lib import load_media
 
 @pe.assign("search")
 async def _(

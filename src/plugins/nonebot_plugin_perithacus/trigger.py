@@ -1,10 +1,8 @@
-import json
 import random
 
-from arclet.alconna import Alconna, Args, Option, Arparma
 from nonebot.log import logger
 from nonebot.adapters import Event
-from nonebot_plugin_alconna import AlconnaQuery, AlcResult, Match, Query, on_alconna, UniMessage, AlconnaMatch, Extension
+from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import all
@@ -34,12 +32,16 @@ async def _(
 
     existing_entry = await get_entry(session, msg_text, scope_list)
     if existing_entry:
+        logger.debug(f"找到匹配的词条 ID {existing_entry.id}")
         contents = await get_contents(existing_entry.id)
         if existing_entry.isRandom:
             content = random.choice(contents)
+            logger.debug(f"随机选择内容 ID {content.id} 进行发送")
         else:
             content = max(contents, key=lambda x: x.timap)
+            logger.debug(f"选择最新内容 ID {content.id} 进行发送")
         send = await UniMessage.export(load_media(content.content))
         await all.finish(send)
     else:
+        logger.debug("未找到匹配的词条")
         await all.finish()

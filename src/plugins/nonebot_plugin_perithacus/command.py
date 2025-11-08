@@ -1,7 +1,6 @@
 from arclet.alconna import Alconna, Arg, Args, Subcommand, Option, CommandMeta, MultiVar
 from nonebot import on_message
 from nonebot_plugin_alconna import on_alconna
-from nonebot_plugin_alconna.uniseg import Image, Text, At, UniMessage
 from nepattern import Any
 
 perithacus = Alconna(

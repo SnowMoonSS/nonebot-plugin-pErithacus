@@ -20,6 +20,6 @@ async def _(
     for entry in entries:
         id = entry.id
         uni_keyword = UniMessage.load(entry.keyword)
-        message.extend(f"\n{id}、" + uni_keyword)
+        message.extend(f"\n{id}：" + uni_keyword)
 
     await pe.finish(message)

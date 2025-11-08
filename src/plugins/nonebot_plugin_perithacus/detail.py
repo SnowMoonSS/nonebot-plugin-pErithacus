@@ -1,10 +1,9 @@
 from nonebot_plugin_orm import async_scoped_session
-from nonebot.adapters import Event
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Query, AlconnaQuery
 
 from .command import pe
 from .database import get_entry_by_id, get_contents
-from .lib import load_media, save_media
+from .lib import load_media
 
 @pe.assign("detail")
 async def _(

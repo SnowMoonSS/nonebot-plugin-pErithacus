@@ -2,6 +2,7 @@ import os
 import requests
 import json
 
+from nonebot import logger
 from nonebot_plugin_localstore import get_plugin_data_dir
 from nonebot_plugin_alconna import UniMessage
 
@@ -32,6 +33,7 @@ async def save_media(data: UniMessage) -> str:
                 if not os.path.exists(file_path):
                     with open(file_path, 'wb') as file:
                         file.write(response.content)
+                    logger.debug(f"已保存媒体文件：{file_name}")
                 # 标记为 media
                 item['media'] = True
                 # 删除url字段
@@ -59,7 +61,7 @@ def load_media(data: str) -> UniMessage:
 
 def convert_media(data: UniMessage) -> str:
     """
-    将收到的 UniMessage 转换为 JSON 数组，与 save_media 保存下来的格式一致
+    输入解析得到的元组，返回处理后的JSON数组，与 save_media 保存下来的格式一致
     """
     uni_data = UniMessage(data)
     dumped_uni_data = uni_data.dump(json=True)

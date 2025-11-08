@@ -135,12 +135,9 @@ async def get_entry(
     scope_list : list[str],
 ) -> Index | None:
     """
-    返回匹配 keyword 且在 scope 中（如果 scope 非空）的词条 id。
-    - 先筛选未删除的条目
-    - 再按 scope 过滤（scope 字段为 JSON 数组）
-    - 检查 keyword 是否为主 keyword 或出现在 alias（JSON 数组）中
-    - 若匹配到多条，返回 dateModfied 最新的那条的 id
-    - 未命中返回 None
+    返回在 scpoe_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条实体。
+    - keyword: 经由 save_media 或者 convert_media 转换后的 JSON 字符串
+    - scope_list: 字符串列表
     """
     # 筛选未删除的条目
     result = await session.execute(
@@ -156,28 +153,35 @@ async def get_entry(
         try:
             scope_list_from_db = json.loads(entry.scope) if entry.scope else []
             if not any(item in scope_list_from_db for item in scope_list):
+                logger.debug(f"跳过词条 {entry.id}，不在作用域 {scope_list} 中")
                 continue
         except json.JSONDecodeError:
             continue
 
         # 直接匹配 keyword
-        if entry.keyword == keyword:
+        if entry.keyword == keyword and entry.matchMethod == "精准":
             matches.append(entry)
+            logger.debug(f"匹配词条 {entry.id}, 精准匹配")
             continue
-
+        elif entry.matchMethod == "模糊" and UniMessage(load_media(keyword)).only(AlconnaText) and entry.reg is None:
+            key = load_media(keyword).extract_plain_text()
+            entry_key = load_media(entry.keyword).extract_plain_text()
+            if key in entry_key:
+                matches.append(entry)
+                logger.debug(f"匹配词条 {entry.id}，模糊匹配")
+                continue
         # 检查正则表达式
-        if entry.reg and UniMessage(load_media(keyword)).only(AlconnaText):
+        elif entry.reg and UniMessage(load_media(keyword)).only(AlconnaText):
             key = load_media(keyword).extract_plain_text()
             if re.match(entry.reg, key):
                 matches.append(entry)
-
+                logger.debug(f"匹配词条 {entry.id}，正则匹配 {entry.reg}")
+                continue
         # 检查 alias（JSON）
-        try:
-            alias_list = json.loads(entry.alias) if entry.alias else []
-            if keyword in alias_list:
-                matches.append(entry)
-        except json.JSONDecodeError:
-            pass
+        elif entry.alias and keyword in json.loads(entry.alias):
+            matches.append(entry)
+            logger.debug(f"匹配词条 {entry.id}，别名匹配 {entry.alias}")
+            continue
 
     if not matches:
         return None

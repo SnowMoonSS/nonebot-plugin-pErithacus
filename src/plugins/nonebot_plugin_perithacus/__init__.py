@@ -1,4 +1,3 @@
-import os
 from nonebot import get_plugin_config
 from nonebot.plugin import PluginMetadata, require
 
@@ -8,17 +7,6 @@ require("nonebot_plugin_orm")
 require("nonebot_plugin_apscheduler")
 
 from .config import Config
-from . import command
-from . import database
-from . import add
-from . import delete
-from . import lib
-from . import list
-from . import check
-from . import detail
-from . import search
-from . import edit
-from . import trigger
 
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
