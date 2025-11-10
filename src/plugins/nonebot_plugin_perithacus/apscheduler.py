@@ -5,16 +5,13 @@ import asyncio
 from sqlalchemy import select
 from nonebot import logger
 from nonebot_plugin_apscheduler import scheduler
-from nonebot_plugin_orm import async_scoped_session
-from nonebot.adapters.onebot.v11 import Bot
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Target
+from nonebot_plugin_orm import get_session
+from nonebot_plugin_alconna import Target
 
-from .database import Index, get_contents, get_entry_by_id
+from .database import Index, get_contents
 from .lib import load_media
-from .command import pe
 
 async def execute_cron_task(
-    session: async_scoped_session,
     entry_id: int
 ):
     """
@@ -22,7 +19,8 @@ async def execute_cron_task(
     """
     logger.debug(f"执行定时任务，词条ID: {entry_id}")
 
-    existing_entry = await get_entry_by_id(session, entry_id)
+    session = get_session()
+    existing_entry = await session.get(Index, id)
     contents = await get_contents(entry_id)
     if existing_entry:
         if existing_entry.isRandom:
@@ -42,14 +40,14 @@ async def execute_cron_task(
                 target.private = True
                 await load_media(content.content).send(target)
             await asyncio.sleep(random.uniform(0, 1))
+    await session.close()
             
 
-async def load_cron_tasks(
-    session : async_scoped_session,
-):
+async def load_cron_tasks():
     """
     从数据库加载所有带有cron表达式的任务
     """
+    session = get_session()
     # 查询所有cron列有内容的行
     result = await session.execute(
         select(Index).where(Index.cron.isnot(None))
@@ -64,6 +62,7 @@ async def load_cron_tasks(
             add_cron_job(entry.id, entry.cron) # type: ignore
     else:
         logger.info("未找到定时任务")
+    await session.close()
 
 def add_cron_job(entry_id: int, cron_expression: str):
     """
@@ -73,7 +72,7 @@ def add_cron_job(entry_id: int, cron_expression: str):
     """
     try:
         scheduler.add_job(
-            execute_cron_task,
+            execute_cron_task(entry_id),
             trigger = cron_expression,
             id = entry_id,
             replace_existing=True,

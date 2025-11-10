@@ -116,24 +116,24 @@ async def _(
         session.add(existing_entry)
         await session.commit()
         await session.refresh(existing_entry)
-        msg = UniMessage(f"词条 {existing_entry.id}: " + UniMessage(keyword.result) + " 修改成功！")
+        msg = UniMessage(f"词条 {existing_entry.id} : " + UniMessage(keyword.result) + " 修改成功！")
 
         if delete_id.available:
             # 删除指定的内容
             result = await delete_content(existing_entry.id, delete_id.result)
             if result:
-                msg.append("删除内容成功！")
+                msg.append("\n删除内容成功！")
             else:
-                msg.append("删除内容失败，请检查内容编号是否正确")
+                msg.append("\n删除内容失败，请检查内容编号是否正确")
         
         if replace_id.available and content.available:
             # 替换指定的内容
             content_text = await save_media(content.result)
             result = await replace_content(existing_entry.id, replace_id.result, content_text)
             if result:
-                msg.append("替换内容成功！")
+                msg.append("\n替换内容成功！")
             else:
-                msg.append("替换内容失败，请检查内容编号是否正确")
+                msg.append("\n替换内容失败，请检查内容编号是否正确")
         
         await pe.finish(msg)
     else:

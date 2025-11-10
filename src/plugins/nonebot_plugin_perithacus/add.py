@@ -123,10 +123,10 @@ async def _(
             await session.refresh(existing_entry)
 
             uni_keyword = load_media(existing_entry.keyword)
-            await pe.finish(f"词条 {existing_entry.id}: " + uni_keyword + " 加入了新的内容")
+            await pe.finish(f"词条 {existing_entry.id} : " + uni_keyword + " 加入了新的内容")
         else:
             uni_keyword = load_media(existing_entry.keyword)
-            await pe.finish(f"词条 {existing_entry.id}: " + uni_keyword + " 已存在该内容", reply_to=True)
+            await pe.finish(f"词条 {existing_entry.id} : " + uni_keyword + " 已存在该内容", reply_to=True)
     else:
         target = get_target(event, bot)
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
@@ -150,4 +150,4 @@ async def _(
             add_cron_job(new_entry.id, cron_expressions)
 
         uni_keyword = load_media(new_entry.keyword)
-        await pe.finish(f"词条 {new_entry.id}: " + uni_keyword + " 已创建并加入了新的内容")
+        await pe.finish(f"词条 {new_entry.id} : " + uni_keyword + " 已创建并加入了新的内容")

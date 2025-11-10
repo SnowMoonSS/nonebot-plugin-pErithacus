@@ -143,7 +143,7 @@ async def get_entry(
             logger.debug(f"匹配词条 {entry.id}，别名匹配 {entry.alias}")
             continue
         else:
-            logger.debug(f"词条 {entry.id} 未匹配")
+            logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
 
     if not matches:
         return None
