@@ -78,53 +78,55 @@ async def _(
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
-        # 更新已有条目（只在用户提供对应参数时修改）
-        if matchMethod.available:
-            existing_entry.matchMethod = matchMethod.result
+        if add_content(f"Entry_{existing_entry.id}", content_text):
+            # 更新已有条目（只在用户提供对应参数时修改）
+            if matchMethod.available:
+                existing_entry.matchMethod = matchMethod.result
 
-        if isRandom.available:
-            existing_entry.isRandom = isRandom.result
+            if isRandom.available:
+                existing_entry.isRandom = isRandom.result
 
-        if cron.available:
-            existing_entry.cron = cron_expressions
-            if cron_expressions:
-                add_cron_job(existing_entry.id, cron_expressions)
-            else:
-                remove_cron_job(existing_entry.id)
+            if cron.available:
+                existing_entry.cron = cron_expressions
+                if cron_expressions:
+                    add_cron_job(existing_entry.id, cron_expressions)
+                else:
+                    remove_cron_job(existing_entry.id)
 
-        if scope.available:
+            if scope.available:
+                # 合并到已有 JSON 列表
+                try:
+                    scope_list_from_db = json.loads(existing_entry.scope) if existing_entry.scope else []
+                except json.JSONDecodeError:
+                    scope_list_from_db = []
+                if not any(item in scope_list_from_db for item in scope_list):
+                    scope_list_from_db.extend(scope_list)
+                existing_entry.scope = json.dumps(scope_list_from_db)
+
             # 合并到已有 JSON 列表
-            try:
-                scope_list_from_db = json.loads(existing_entry.scope) if existing_entry.scope else []
-            except json.JSONDecodeError:
-                scope_list_from_db = []
-            if not any(item in scope_list_from_db for item in scope_list):
-                scope_list_from_db.extend(scope_list)
-            existing_entry.scope = json.dumps(scope_list_from_db)
+            if alias.available:
+                # 解析已有别名列表
+                alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
+                new_alias = alias_text
+                if new_alias and new_alias not in alias_list:
+                    alias_list.append(new_alias)
+                existing_entry.alias = json.dumps(alias_list) if alias_list else None
 
-        # 合并到已有 JSON 列表
-        if alias.available:
-            # 解析已有别名列表
-            alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
-            new_alias = alias_text
-            if new_alias and new_alias not in alias_list:
-                alias_list.append(new_alias)
-            existing_entry.alias = json.dumps(alias_list) if alias_list else None
+            if reg.available:
+                existing_entry.reg = reg.result
 
-        if reg.available:
-            existing_entry.reg = reg.result
+            existing_entry.dateModified=datetime.datetime.now()
 
-        existing_entry.dateModified=datetime.datetime.now()
+            # 提交修改并刷新实体
+            session.add(existing_entry)
+            await session.commit()
+            await session.refresh(existing_entry)
 
-        # 提交修改并刷新实体
-        session.add(existing_entry)
-        await session.commit()
-        await session.refresh(existing_entry)
-
-        add_content(f"Entry_{existing_entry.id}", content_text)
-
-        uni_keyword = load_media(existing_entry.keyword)
-        await pe.finish(f"词条 {existing_entry.id}: " + uni_keyword + " 加入了新的内容")
+            uni_keyword = load_media(existing_entry.keyword)
+            await pe.finish(f"词条 {existing_entry.id}: " + uni_keyword + " 加入了新的内容")
+        else:
+            uni_keyword = load_media(existing_entry.keyword)
+            await pe.finish(f"词条 {existing_entry.id}: " + uni_keyword + " 已存在该内容", reply_to=True)
     else:
         target = get_target(event, bot)
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
@@ -136,7 +138,7 @@ async def _(
             scope = json.dumps(scope_list),
             reg = reg.result if reg.available else None,
             source = this_source,
-            target = target.dump(),
+            target = json.dumps(target.dump()),
             alias = json.dumps([alias_text]) if alias.available else None,
         )
         session.add(new_entry)
@@ -148,4 +150,4 @@ async def _(
             add_cron_job(new_entry.id, cron_expressions)
 
         uni_keyword = load_media(new_entry.keyword)
-        await pe.finish(f"词条 {new_entry.id}" + uni_keyword + " 已创建并加入了新的内容")
+        await pe.finish(f"词条 {new_entry.id}: " + uni_keyword + " 已创建并加入了新的内容")

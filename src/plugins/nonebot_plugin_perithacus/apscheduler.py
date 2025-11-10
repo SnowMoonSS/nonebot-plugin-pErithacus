@@ -32,7 +32,7 @@ async def execute_cron_task(
             content = max(contents, key=lambda x: x.timap)
             logger.debug(f"选择最新内容 ID {content.id} 进行发送")
         for scope in json.loads(existing_entry.scope):
-            target = Target.load(existing_entry.target)
+            target = Target.load(json.loads(existing_entry.target))
             if scope.startswith("g"):
                 target.id = scope[1:]
                 target.private = False

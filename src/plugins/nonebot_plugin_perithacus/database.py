@@ -20,10 +20,10 @@ class Index(Model):
     matchMethod: Mapped[str] = mapped_column(String(8), default="精准", comment="匹配方式")
     isRandom: Mapped[bool] = mapped_column(Boolean, default=True, comment="是否随机回复")
     cron: Mapped[Optional[str]] = mapped_column(String(64), default=None, comment="定时cron表达式")
-    scope: Mapped[str] = mapped_column(Text, default=None, comment="作用域（数组，每个数组代表一个作用域）")
-    reg: Mapped[Optional[str]] = mapped_column(Text, default=None, comment="正则表达式")
-    source: Mapped[str] = mapped_column(Text, default=None, comment="来源")
-    target: Mapped[dict[str, Any]] = mapped_column(Text, default=None, comment="Target对象的dump字典")
+    scope: Mapped[str] = mapped_column(Text, default="[]", comment="作用域（数组，每个数组代表一个作用域）")
+    reg: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None, comment="正则表达式")
+    source: Mapped[str] = mapped_column(Text, comment="来源")
+    target: Mapped[str] = mapped_column(Text, default=None, comment="json.dumps(Target.dump())")
     deleted: Mapped[bool] = mapped_column(Boolean, default=False, comment="是否删除")
     alias: Mapped[Optional[str]] = mapped_column(Text, default=None, comment="别名（数组，每个数组代表一个别名，每个别名都是一个UniMessage对象dump出来的JSON数组）")
     dateModified: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now, comment="词条编辑时间戳")
@@ -56,10 +56,22 @@ def add_content(table_name: str, content: str):
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
     with engine.connect() as conn:
+        # 先检查是否已存在相同的content
+        select_stmt = select(table).where(table.c.content == content)
+        result = conn.execute(select_stmt)
+        existing_rows = result.fetchall()
+        
+        # 如果已存在相同的content，则不插入
+        if existing_rows:
+            engine.dispose()
+            return False
+        
+        # 如果不存在，则插入新记录
         ins = table.insert().values(content=content, timap=datetime.datetime.now())
         conn.execute(ins)
         conn.commit()
     engine.dispose()
+    return True
 
 async def get_contents(id: int):
     """
@@ -130,6 +142,8 @@ async def get_entry(
             matches.append(entry)
             logger.debug(f"匹配词条 {entry.id}，别名匹配 {entry.alias}")
             continue
+        else:
+            logger.debug(f"词条 {entry.id} 未匹配")
 
     if not matches:
         return None

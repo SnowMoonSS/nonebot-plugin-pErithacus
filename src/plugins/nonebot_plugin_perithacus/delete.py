@@ -53,7 +53,7 @@ async def _(
             # 从scope中删除
             scope_list_from_db = [item for item in scope_list_from_db if item not in scope_list]
             # 更新scope字段或标记删除
-            if scope_list_from_db:
+            if scope_list_from_db != []:
                 entry.scope = json.dumps(scope_list)
                 session.add(entry)
                 await session.commit()
