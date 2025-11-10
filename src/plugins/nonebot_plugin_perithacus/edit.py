@@ -1,6 +1,7 @@
 import datetime
 import json
 
+from apscheduler.triggers.cron import CronTrigger
 from nonebot.adapters import Event
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session
@@ -8,6 +9,7 @@ from nonebot_plugin_orm import async_scoped_session
 from .command import pe
 from .database import get_entry, delete_content, replace_content
 from .lib import save_media, convert_media
+from .apscheduler import add_cron_job, remove_cron_job
 
 @pe.assign("edit")
 async def _(
@@ -43,6 +45,19 @@ async def _(
         # {userid} 格式，直接使用 userid
         user_id = session_id
         this_source = f"u{user_id}"
+
+    # 验证 cron 表达式的基本格式，当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
+    if cron.available:
+        if cron.result != "None":
+            cron_expressions = cron.result.replace("#", " ")
+            try:
+                CronTrigger.from_crontab(cron_expressions)
+            except ValueError:
+                await pe.finish("cron参数格式错误")
+        else:
+            cron_expressions = None
+    else:
+        cron_expressions = None
     
     # 处理scope
     if not scope.available:
@@ -67,7 +82,11 @@ async def _(
             existing_entry.isRandom = isRandom.result
 
         if cron.available:
-            existing_entry.cron = cron.result
+            existing_entry.cron = cron_expressions
+            if cron_expressions:
+                add_cron_job(existing_entry.id, cron_expressions)
+            else:
+                remove_cron_job(existing_entry.id)
 
         # 合并到已有 JSON 列表
         if scope.available:
@@ -97,7 +116,7 @@ async def _(
         session.add(existing_entry)
         await session.commit()
         await session.refresh(existing_entry)
-        msg = UniMessage("词条：" + UniMessage(keyword.result) + " 修改成功！")
+        msg = UniMessage(f"词条 {existing_entry.id}: " + UniMessage(keyword.result) + " 修改成功！")
 
         if delete_id.available:
             # 删除指定的内容
@@ -118,4 +137,4 @@ async def _(
         
         await pe.finish(msg)
     else:
-        await pe.finish("词条 " + UniMessage(keyword.result) + " 不存在")
+        await pe.finish("词条: " + UniMessage(keyword.result) + " 不存在")

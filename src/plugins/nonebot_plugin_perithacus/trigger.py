@@ -40,7 +40,6 @@ async def _(
         else:
             content = max(contents, key=lambda x: x.timap)
             logger.debug(f"选择最新内容 ID {content.id} 进行发送")
-        send = await UniMessage.export(load_media(content.content))
         await UniMessage.finish(load_media(content.content))
     else:
         logger.debug("Trigger 未找到匹配的词条")

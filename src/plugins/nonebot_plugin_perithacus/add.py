@@ -1,17 +1,21 @@
 import datetime
 import json
 
-from nonebot.adapters import Event
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from apscheduler.triggers.cron import CronTrigger
+from nonebot import logger
+from nonebot.adapters import Event, Bot
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Target, get_target
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
 from .database import Index, create_content_list, add_content, get_entry
 from .lib import save_media, load_media
+from .apscheduler import add_cron_job, remove_cron_job
 
 @pe.assign("add")
 async def _(
     event: Event,
+    bot: Bot,
     session : async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
@@ -26,6 +30,7 @@ async def _(
     """
     添加词条
     """
+
 
     # 处理keyword
     keyword_text = await save_media(keyword.result)
@@ -44,6 +49,19 @@ async def _(
         # {userid} 格式，直接使用 userid
         user_id = session_id
         this_source = f"u{user_id}"
+    
+    # 验证 cron 表达式的基本格式，当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
+    if cron.available:
+        if cron.result != "None":
+            cron_expressions = cron.result.replace("#", " ")
+            try:
+                CronTrigger.from_crontab(cron_expressions)
+            except ValueError:
+                await pe.finish("cron参数格式错误")
+        else:
+            cron_expressions = None
+    else:
+        cron_expressions = None
     
     # 处理scope
     if not scope.available:
@@ -68,7 +86,11 @@ async def _(
             existing_entry.isRandom = isRandom.result
 
         if cron.available:
-            existing_entry.cron = cron.result
+            existing_entry.cron = cron_expressions
+            if cron_expressions:
+                add_cron_job(existing_entry.id, cron_expressions)
+            else:
+                remove_cron_job(existing_entry.id)
 
         if scope.available:
             # 合并到已有 JSON 列表
@@ -102,26 +124,28 @@ async def _(
         add_content(f"Entry_{existing_entry.id}", content_text)
 
         uni_keyword = load_media(existing_entry.keyword)
-        uni_content = load_media(content_text)
-        await pe.finish("词条：" + uni_keyword + f" 加入了新的内容，编号为：{existing_entry.id}")
+        await pe.finish(f"词条 {existing_entry.id}: " + uni_keyword + " 加入了新的内容")
     else:
+        target = get_target(event, bot)
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         new_entry = Index(
-            keyword=keyword_text,
-            matchMethod=matchMethod.result if matchMethod.available else "精准",
-            isRandom=isRandom.result if isRandom.available else True,
-            cron=cron.result if cron.available else None,
-            scope=json.dumps(scope_list),
-            reg=reg.result if reg.available else None,
-            source=this_source,
-            alias=json.dumps([alias_text]) if alias.available else None,
+            keyword = keyword_text,
+            matchMethod = matchMethod.result if matchMethod.available else "精准",
+            isRandom = isRandom.result if isRandom.available else True,
+            cron = cron_expressions if cron.available else None,
+            scope = json.dumps(scope_list),
+            reg = reg.result if reg.available else None,
+            source = this_source,
+            target = target.dump(),
+            alias = json.dumps([alias_text]) if alias.available else None,
         )
         session.add(new_entry)
         await session.commit()
         await session.refresh(new_entry)
         create_content_list(f"Entry_{new_entry.id}")
         add_content(f"Entry_{new_entry.id}", content_text)
+        if cron_expressions:
+            add_cron_job(new_entry.id, cron_expressions)
 
         uni_keyword = load_media(new_entry.keyword)
-        uni_content = load_media(content_text)
-        await pe.finish("词条：" + uni_keyword + f" 已创建并加入了新的内容，编号为：{new_entry.id}")
+        await pe.finish(f"词条 {new_entry.id}" + uni_keyword + " 已创建并加入了新的内容")
