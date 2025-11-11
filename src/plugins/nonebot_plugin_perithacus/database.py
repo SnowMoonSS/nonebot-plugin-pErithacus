@@ -47,6 +47,20 @@ def create_content_list(table_name: str):
     metadata.create_all(engine, tables=[table])
     engine.dispose()
 
+def remove_sticker_info(content_str: str) -> str:
+    """
+    从 content 字符串中移除 sticker 信息。
+    """
+    # 将字符串转换为 Python 对象
+    content_list = json.loads(content_str)
+    
+    # 遍历列表中的每个字典，并删除 "sticker" 键
+    for item in content_list:
+        item.pop("sticker", None)
+    
+    # 将处理后的对象转换回字符串格式
+    return json.dumps(content_list)
+
 def add_content(table_name: str, content: str):
     """
     向 table_name 表中添加一条 content 记录
@@ -56,13 +70,18 @@ def add_content(table_name: str, content: str):
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
     with engine.connect() as conn:
+        # 移除待插入内容中的 sticker 信息
+        clean_content = remove_sticker_info(content)
+
         # 先检查是否已存在相同的content
-        select_stmt = select(table).where(table.c.content == content)
+        select_stmt = select(table.c.content)
         result = conn.execute(select_stmt)
-        existing_rows = result.fetchall()
+        existing_contents = [row[0] for row in result.fetchall()]
+        # 将现有记录中的 sticker 信息移除以便正确比较
+        cleaned_existing_contents = [remove_sticker_info(existing_content) for existing_content in existing_contents]
         
         # 如果已存在相同的content，则不插入
-        if existing_rows:
+        if clean_content in cleaned_existing_contents:
             engine.dispose()
             return False
         
