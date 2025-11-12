@@ -30,9 +30,11 @@ from .apscheduler import load_cron_tasks
 
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
-    description="根据设置的关键词进行回复",
+    description="pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户设定的关键词自动回复相关内容。该插件提供了完整的词条管理功能，让用户能够轻松创建、编辑和管理自定义回复内容。",
     usage="发送“pe --help”查看帮助",
-    config=Config,
+    type="application",
+    homepage="https://github.com/SnowMoonSS/nonebot-plugin-pErithacus",
+    supported_adapters={"~onebot.v11"},
 )
 
 config = get_plugin_config(Config)

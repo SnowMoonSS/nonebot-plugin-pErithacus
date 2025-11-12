@@ -56,11 +56,11 @@ perithacus = Alconna(
         Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域群号", str], default=""),
-        Option("-R|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
+        Option("-re|--regex", Args["reg#正则匹配的正则表达式", str], default=""),
         Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
         Option("-d|--delete", Args["delete_id", int], default=0, help_text="删除指定id的回复"),
         Option(
-            "-R|--replace",
+            "-rep|--replace",
             Args(
                 Arg("replace_id", int, notice="将被替换的内容编号"),
                 Arg("content", MultiVar(Any), notice="要替换的内容"),

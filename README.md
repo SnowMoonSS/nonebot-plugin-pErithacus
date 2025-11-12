@@ -1,12 +1,296 @@
-# nonebot-plugin-pErithacus
+<div align="center">
+    <a href="https://v2.nonebot.dev/store">
+    <img src="https://raw.githubusercontent.com/fllesser/nonebot-plugin-template/refs/heads/resource/.docs/NoneBotPlugin.svg" width="310" alt="logo"></a>
 
-## How to start
+## ✨ nonebot-plugin-pErithacus ✨
+[![LICENSE](https://img.shields.io/github/license/SnowMoonSS/nonebot-plugin-pErithacus.svg)](./LICENSE)
+[![pypi](https://img.shields.io/pypi/v/nonebot-plugin-pErithacus.svg)](https://pypi.python.org/pypi/nonebot-plugin-pErithacus)
+[![python](https://img.shields.io/badge/python-3.10|3.11|3.12|3.13-blue.svg)](https://www.python.org)
+[![uv](https://img.shields.io/badge/package%20manager-uv-black?style=flat-square&logo=uv)](https://github.com/astral-sh/uv)
+<br/>
+[![ruff](https://img.shields.io/badge/code%20style-ruff-black?style=flat-square&logo=ruff)](https://github.com/astral-sh/ruff)
+[![pre-commit](https://results.pre-commit.ci/badge/github/SnowMoonSS/nonebot-plugin-pErithacus/master.svg)](https://results.pre-commit.ci/latest/github/SnowMoonSS/nonebot-plugin-pErithacus/master)
 
-1. generate project using `nb create` .
-2. create your plugin using `nb plugin create` .
-3. writing your plugins under `src/plugins` folder.
-4. run your bot using `nb run --reload` .
+</div>
 
-## Documentation
+## 简介
 
-See [Docs](https://nonebot.dev/)
+pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户设定的关键词自动回复相关内容。该插件提供了完整的词条管理功能，让用户能够轻松创建、编辑和管理自定义回复内容。
+
+## 功能特性
+
+- 📝 词条管理：添加、删除、修改、查看词条
+- 🔍 多种匹配模式：支持精准匹配、模糊匹配和正则表达式匹配
+- ⏰ 定时触发：支持使用 cron 表达式设置定时自动触发回复
+- 🎲 随机回复：可设置多个回复内容并随机选择
+- 🌐 作用域管理：支持按群组或私聊会话分别管理不同的词条
+- 🔗 别名词条：可以为词条设置别名，增加使用的灵活性
+
+## 安装方法
+
+<details open>
+<summary>使用 nb-cli 安装（尚未实现）</summary>
+在 nonebot2 项目的根目录下打开命令行, 输入以下指令即可安装
+
+    nb plugin install nonebot-plugin-pErithacus --upgrade
+使用 **pypi** 源安装
+
+    nb plugin install nonebot-plugin-pErithacus --upgrade -i "https://pypi.org/simple"
+使用**清华源**安装
+
+    nb plugin install nonebot-plugin-pErithacus --upgrade -i "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+
+</details>
+
+<details>
+<summary>使用包管理器安装（尚未实现）</summary>
+在 nonebot2 项目的插件目录下, 打开命令行, 根据你使用的包管理器, 输入相应的安装命令
+
+<details open>
+<summary>uv</summary>
+
+    uv add nonebot-plugin-pErithacus
+安装仓库 master 分支
+
+    uv add git+https://github.com/SnowMoonSS/nonebot-plugin-pErithacus@master
+</details>
+
+<details>
+<summary>pdm</summary>
+
+    pdm add nonebot-plugin-pErithacus
+安装仓库 master 分支
+
+    pdm add git+https://github.com/SnowMoonSS/nonebot-plugin-pErithacus@master
+</details>
+<details>
+<summary>poetry</summary>
+
+    poetry add nonebot-plugin-pErithacus
+安装仓库 master 分支
+
+    poetry add git+https://github.com/SnowMoonSS/nonebot-plugin-pErithacus@master
+</details>
+
+打开 nonebot2 项目根目录下的 `pyproject.toml` 文件, 在 `[tool.nonebot]` 部分追加写入
+
+    plugins = ["nonebot_plugin_perithacus"]
+
+</details>
+
+<details>
+<summary>使用 nbr 安装(使用 uv 管理依赖可用)（尚未实现）</summary>
+
+[nbr](https://github.com/fllesser/nbr) 是一个基于 uv 的 nb-cli，可以方便地管理 nonebot2
+
+    nbr plugin install nonebot-plugin-pErithacus
+使用 **pypi** 源安装
+
+    nbr plugin install nonebot-plugin-pErithacus -i "https://pypi.org/simple"
+使用**清华源**安装
+
+    nbr plugin install nonebot-plugin-pErithacus -i "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+</details>
+
+
+## ⚙️ 配置
+
+目前暂无配置项
+
+## 🎉 使用
+
+### 基本命令
+```
+pe <子命令> [选项...] [参数...]
+```
+发送 `pe --help` 查看详细的命令帮助信息。详情可查看[command.py](./command.py)
+
+### add | 添加
+添加新的词条到系统中。
+
+**语法：**
+```
+pe add <关键词> <回复内容> [选项...]
+```
+
+**参数：**
+- `关键词`: 要匹配的关键词
+- `回复内容`: 当匹配成功时回复的内容
+
+**选项：**
+- `-m`, `--match`: 匹配方式（精准/模糊），默认为"精准"。
+- `-r`, `--random`: 是否随机回复，默认为True。为否时回复为最后添加的内容。
+- `-c`, `--cron`: 定时触发的cron表达式，默认为空。详见[CRON 表达式](#CRON-表达式)
+- `-s`, `--scope`: 作用域。该参数配合<关键词>进行词条查询，默认为当前会话所在作用域。指定作用域时，将会根据指定作用域对应的词条，并向其添加作用域。详见[作用域](#作用域)。
+- `-R`, `--reg`: 正则匹配的正则表达式，默认为空。当存在正则表达式时，将不会进行模糊匹配。
+- `-a`, `--alias`: 为词条添加别名，默认为空。一次只能添加一个别名。
+
+**说明：**
+插件会先从数据库中查找已有词条。排除已删除的，根据已有的匹配方式、正则表达式在当前会话所在作用域或指定的作用域中匹配。
+如果匹配到多条词条，将只会为最近修改过的词条进行操作。
+
+### del | 删除
+删除指定的词条。
+
+**语法：**
+```
+pe del <关键词> [选项]
+```
+**参数：**
+- `关键词`: 要删除的词条关键词
+
+**选项：**
+- `-s`, `--scope`: 作用域，默认为当前会话所在的作用域。详见[作用域](#作用域)
+
+**说明：**
+从作用域中删除指定的词条。未指定作用域时，删除当前会话所在的作用域。
+若删除后不存在作用域，将在数据库中标记为已删除状态。
+
+### list
+列出所有词条或指定词条的详细内容。
+
+**语法：**
+```
+pe list [词条ID]
+```
+
+**参数：**
+- `词条ID` (可选): 指定要查看详细内容的词条ID
+
+### search | 搜索
+
+根据关键词搜索相关的词条。
+
+**语法：**
+```
+pe search <关键词>
+```
+
+**参数：**
+- `关键词`: 搜索关键词
+
+### check | 查看
+
+查看指定词条的配置信息。
+
+**语法：**
+```
+pe check <词条ID> [选项]
+```
+
+**参数：**
+- `词条ID`: 要查看的词条ID
+
+**选项：**
+- `-f`, `--force`: 强制查看已被标记为删除的词条
+
+### detail | 详情
+
+查看指定词条的详细内容。
+
+**语法：**
+```
+pe detail <词条ID> [选项...]
+```
+
+**参数：**
+- `词条ID`: 要查看的词条ID
+
+**选项：**
+- `-f`, `--force`: 强制查看已被标记为删除的词条
+
+### edit | 修改
+
+修改已有词条的配置。
+
+**语法：**
+```
+pe edit <关键词> [选项...]
+```
+
+**参数：**
+- `关键词`: 要修改的词条关键词
+
+**选项：**
+- `-r`, `--random`: 修改当前的回复模式（True/False）。
+- `-m`, `--match`: 修改当前的匹配方式（精准/模糊）。
+- `-c`, `--cron`: 替换当前的cron表达式。详见[CRON 表达式](#CRON-表达式)
+- `-s`, `--scope`: 作用域。该参数配合<关键词>进行词条查询，默认为当前会话所在作用域。指定作用域时，将会根据指定作用域对应的词条，并向其添加作用域。详见[作用域](#作用域)
+- `-re`, `--regex`: 修改正则匹配的正则表达式。当存在正则表达式时，将不会进行模糊匹配。
+- `-a`, `--alias`: 为词条添加别名。一次只能添加一个别名。
+- `-d`, `--delete`: 删除指定ID的回复内容
+- `-rep`, `--replace`: 替换指定ID的回复内容
+    - `<内容ID>`: 要替换的回复内容ID
+    - `<内容>`: 替换为的内容
+
+**说明：**
+插件会先从数据库中查找已有词条。排除已删除的，根据已有的匹配方式、正则表达式在当前会话所在作用域或指定的作用域中匹配。
+如果匹配到多条词条，将只会为最近修改过的词条进行操作。
+要对作用域进行缩减，使用[`del`命令](#del--删除)
+
+## 匹配方式
+
+### 精准匹配
+消息内容必须与关键词完全一致才会触发回复。
+
+### 模糊匹配
+消息内容包含关键词即可触发回复。
+
+### 正则匹配
+消息内容符合指定的正则表达式才会触发回复。当存在正则表达式时，将不会进行模糊匹配。
+
+## CRON 表达式
+
+定时任务使用标准的 cron 表达式格式，以`#`进行分割：
+分 时 日 月 周
+
+例如：`0#0#8#*#*#*` 表示每天上午8点触发
+
+可根据[crontab guru](https://crontab.guru/)编写cron表达式。添加定时消息时记得用`#`替换掉空格。
+
+## 作用域
+
+作用域用于控制词条的有效范围：
+- 以 `g` 开头表示群组作用域，如 `g123456`
+- 以 `u` 开头表示私聊作用域，如 `u123456`
+- 多个作用域使用`,`进行分割，如 `g123456,u123456`
+
+## 示例
+添加一条简单的问候语：
+```
+pe add hello 你好！
+```
+添加每日定时提醒，每天早上9点发送消息：
+```
+pe add 晨报 新的一天开始了！ -c 0#9#*#*#*
+```
+添加带模糊匹配的词条：
+```
+pe add 笑话 这是一个有趣的笑话 -m 模糊
+```
+查看所有词条：
+```
+pe list
+```
+搜索相关词条：
+```
+pe search 笑话
+```
+
+## 数据存储
+数据存储在 nonebot-plugin-localstore 定义的 data 目录下。
+在不同的操作系统中，数据存储路径不同：
+macOS: ~/Library/Application Support/nonebot2
+Unix: ~/.local/share/nonebot2 or in $XDG_DATA_HOME, if defined
+Win XP (not roaming): C:\Documents and Settings\<username>\Application Data\nonebot2
+Win 7 (not roaming): C:\Users\<username>\AppData\Local\nonebot2
+
+可在`.env`文件中添加`LOCALSTORE_USE_CWD = True`使其保存在当前工作目录下
+
+## 已知的问题
+- 没有删除别名的方法
+
+## 🎨 效果图
+大概会有的
