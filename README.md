@@ -281,11 +281,12 @@ pe search 笑话
 
 ## 数据存储
 数据存储在 nonebot-plugin-localstore 定义的 data 目录下。
+
 在不同的操作系统中，数据存储路径不同：
-macOS: ~/Library/Application Support/nonebot2
-Unix: ~/.local/share/nonebot2 or in $XDG_DATA_HOME, if defined
-Win XP (not roaming): C:\Documents and Settings\<username>\Application Data\nonebot2
-Win 7 (not roaming): C:\Users\<username>\AppData\Local\nonebot2
+- macOS: ~/Library/Application Support/nonebot2
+- Unix: ~/.local/share/nonebot2 or in $XDG_DATA_HOME, if defined
+- Win XP (not roaming): C:\Documents and Settings\<username>\Application Data\nonebot2
+- Win 7 (not roaming): C:\Users\<username>\AppData\Local\nonebot2
 
 可在`.env`文件中添加`LOCALSTORE_USE_CWD = True`使其保存在当前工作目录下
 
