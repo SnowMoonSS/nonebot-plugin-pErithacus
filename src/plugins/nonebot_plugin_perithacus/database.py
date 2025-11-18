@@ -181,7 +181,7 @@ async def add_content(table_id: int, content: str):
     table = Table(table_name, metadata, autoload_with=engine)
 
     with engine.connect() as conn:
-        ins = table.insert().values(content=content)
+        ins = table.insert().values(content=content, deleted=False, dateModified=datetime.datetime.now(), dateCreate=datetime.datetime.now())
         conn.execute(ins)
         conn.commit()
     engine.dispose()

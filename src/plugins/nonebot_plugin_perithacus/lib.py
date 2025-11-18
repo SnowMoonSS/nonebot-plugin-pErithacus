@@ -1,6 +1,7 @@
 import os
 import requests
 import json
+#import hashlib
 
 from nonebot import logger
 from nonebot_plugin_localstore import get_plugin_data_dir
@@ -27,7 +28,8 @@ async def save_media(data: UniMessage) -> str:
             # 下载文件
             response = requests.get(item['url'])
             if response.status_code == 200:
-                file_name = os.path.splitext(item['id'])[0]
+                #md5 = hashlib.md5(response.content).hexdigest()
+                file_name = item['id']
                 file_path = os.path.join(media_save_dir, file_name)
                 # 如果文件不存在则保存文件
                 if not os.path.exists(file_path):
@@ -53,7 +55,7 @@ def load_media(data: str) -> UniMessage:
     loadded_data = json.loads(data)
     for item in loadded_data:
         if item.get('media'):
-            item['path'] = str(media_save_dir / os.path.splitext(item['id'])[0])
+            item['path'] = str(media_save_dir / item['id'])
             del item['media']
 
     dumped_data = json.dumps(loadded_data, ensure_ascii=False)

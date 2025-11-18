@@ -34,13 +34,18 @@ async def _(
     if existing_entry:
         logger.debug(f"找到匹配的词条 ID {existing_entry.id}")
         contents = await get_contents(existing_entry.id)
-        if existing_entry.isRandom:
-            content = random.choice(contents)
-            logger.debug(f"随机选择内容 ID {content.id} 进行发送")
+        if contents:
+            logger.debug(f"找到匹配的词条内容")
+            if existing_entry.isRandom:
+                content = random.choice(contents)
+                logger.debug(f"随机选择内容 ID {content.id} 进行发送")
+            else:
+                content = max(contents, key=lambda x: x.timap)
+                logger.debug(f"选择最新内容 ID {content.id} 进行发送")
+            await UniMessage.finish(load_media(content.content))
         else:
-            content = max(contents, key=lambda x: x.timap)
-            logger.debug(f"选择最新内容 ID {content.id} 进行发送")
-        await UniMessage.finish(load_media(content.content))
+            logger.debug("所有内容已标记为已删除")
+            await all.finish()
     else:
         logger.debug("Trigger 未找到匹配的词条")
         await all.finish()
