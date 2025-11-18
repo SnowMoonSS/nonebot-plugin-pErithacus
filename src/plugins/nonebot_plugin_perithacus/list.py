@@ -24,7 +24,7 @@ async def _(
             msg = UniMessage("词条" + load_media(entry.keyword) + "的内容如下：\n")
             rows = await get_contents(entry_id.result)
             for row in rows:
-                msg.extend(f"{row.id}　" + load_media(row.content) + f"　时间: {row.timap}\n")
+                msg.extend(f"{row.id}　" + load_media(row.content) + f"　时间: {row.dateModified}\n")
             await pe.finish(msg)
     else:
         result = await session.execute(

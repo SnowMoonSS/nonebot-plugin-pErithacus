@@ -78,7 +78,7 @@ async def _(
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
-        if add_content(f"Entry_{existing_entry.id}", content_text):
+        if await add_content(existing_entry.id, content_text):
             # 更新已有条目（只在用户提供对应参数时修改）
             if matchMethod.available:
                 existing_entry.matchMethod = matchMethod.result
@@ -145,7 +145,7 @@ async def _(
         await session.commit()
         await session.refresh(new_entry)
         create_content_list(f"Entry_{new_entry.id}")
-        add_content(f"Entry_{new_entry.id}", content_text)
+        await add_content(new_entry.id, content_text)
         if cron_expressions:
             add_cron_job(new_entry.id, cron_expressions)
 

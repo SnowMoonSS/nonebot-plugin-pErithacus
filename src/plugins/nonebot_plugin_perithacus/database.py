@@ -42,55 +42,12 @@ def create_content_list(table_name: str):
         metadata,
         Column("id", Integer, primary_key=True, autoincrement=True),
         Column("content", Text, nullable=False),
-        Column("timap", DateTime, default=datetime.datetime.now),
+        Column("deleted", Boolean, default=False),
+        Column("dateModified", DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now),
+        Column("dateCreate", DateTime, default=datetime.datetime.now),
     )
     metadata.create_all(engine, tables=[table])
     engine.dispose()
-
-def remove_sticker_info(content_str: str) -> str:
-    """
-    从 content 字符串中移除 sticker 信息。
-    """
-    # 将字符串转换为 Python 对象
-    content_list = json.loads(content_str)
-    
-    # 遍历列表中的每个字典，并删除 "sticker" 键
-    for item in content_list:
-        item.pop("sticker", None)
-    
-    # 将处理后的对象转换回字符串格式
-    return json.dumps(content_list)
-
-def add_content(table_name: str, content: str):
-    """
-    向 table_name 表中添加一条 content 记录
-    """
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
-    with engine.connect() as conn:
-        # 移除待插入内容中的 sticker 信息
-        clean_content = remove_sticker_info(content)
-
-        # 先检查是否已存在相同的content
-        select_stmt = select(table.c.content)
-        result = conn.execute(select_stmt)
-        existing_contents = [row[0] for row in result.fetchall()]
-        # 将现有记录中的 sticker 信息移除以便正确比较
-        cleaned_existing_contents = [remove_sticker_info(existing_content) for existing_content in existing_contents]
-        
-        # 如果已存在相同的content，则不插入
-        if clean_content in cleaned_existing_contents:
-            engine.dispose()
-            return False
-        
-        # 如果不存在，则插入新记录
-        ins = table.insert().values(content=content, timap=datetime.datetime.now())
-        conn.execute(ins)
-        conn.commit()
-    engine.dispose()
-    return True
 
 async def get_contents(id: int):
     """
@@ -102,7 +59,7 @@ async def get_contents(id: int):
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
     with engine.connect() as conn:
-        result = conn.execute(select(table))
+        result = conn.execute(select(table).where(table.c.deleted == False))
         rows = result.fetchall()
     engine.dispose()
     return rows
@@ -181,9 +138,58 @@ async def get_entry_by_id(
     entry = await session.get(Index, id)
     return entry
 
-async def delete_content(table_id: int, id: int):
+def remove_sticker_info(content_str: str) -> str:
     """
-    删除 table_id 表中的 id 记录
+    从 content 字符串中移除 sticker 信息。
+    """
+    # 将字符串转换为 Python 对象
+    content_list = json.loads(content_str)
+    
+    # 遍历列表中的每个字典，并删除 "sticker" 键
+    for item in content_list:
+        item.pop("sticker", None)
+    
+    # 将处理后的对象转换回字符串格式
+    return json.dumps(content_list)
+
+def compare_contents(content1: str, content2: str) -> bool:
+    """
+    比较两个 content 是否相等。
+    """
+    clean_content1 = remove_sticker_info(content1)
+    clean_content2 = remove_sticker_info(content2)
+    return clean_content1 == clean_content2
+
+
+async def add_content(table_id: int, content: str):
+    """
+    向 table_name 表中添加一条 content 记录
+    """
+    table_name = f"Entry_{table_id}"
+    # 提取所有的 content
+    rows = await get_contents(table_id)
+    for row in rows:
+        if compare_contents(row.content, content):
+            return False
+        else:
+            continue
+
+    logger.debug(f"添加内容 {content} 到表 {table_name}")
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=engine)
+
+    with engine.connect() as conn:
+        ins = table.insert().values(content=content)
+        conn.execute(ins)
+        conn.commit()
+    engine.dispose()
+    return True
+
+async def delete_content(table_id: int, content_id: int):
+    """
+    将 table_id 表中的 content_id 记录标记为已删除
     """
     table_name = f"Entry_{table_id}"
 
@@ -191,26 +197,46 @@ async def delete_content(table_id: int, id: int):
     engine = create_engine(f"sqlite:///{db_path}")
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
-    with engine.connect() as conn:
-        delete_stmt = table.delete().where(table.c.id == id)
-        result = conn.execute(delete_stmt)
-        conn.commit()
-    engine.dispose()
-    return result.rowcount > 0
+    try:
+        with engine.connect() as conn:
+            update_stmt = table.update().where(table.c.id == content_id).values(deleted=True, dateModified=datetime.datetime.now())
+            result = conn.execute(update_stmt)
+            conn.commit()
+        logger.debug(f"内容 {content_id} 标记为已删除")
+        return True
+    except Exception as e:
+        logger.error(f"删除内容 {content_id} 时出错：{e}")
+        return False
+    finally:
+        engine.dispose()
 
-async def replace_content(table_id: int, id: int, new_content: str):
+async def replace_content(table_id: int, content_id: int, new_content: str):
     """
     替换 table_id 表中的 id 记录的 content 为 new_content
     """
     table_name = f"Entry_{table_id}"
+    # 提取所有的 content
+    rows = await get_contents(table_id)
+    for row in rows:
+        if compare_contents(row.content, new_content):
+            return False
+        else:
+            continue
 
+    logger.debug(f"替换内容 {new_content} 到表 {table_name}")
     db_path = get_plugin_data_dir() / "content.db"
     engine = create_engine(f"sqlite:///{db_path}")
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
-    with engine.connect() as conn:
-        update_stmt = table.update().where(table.c.id == id).values(content=new_content, timap=datetime.datetime.now())
-        result = conn.execute(update_stmt)
-        conn.commit()
-    engine.dispose()
-    return result.rowcount > 0
+    try:
+        with engine.connect() as conn:
+            update_stmt = table.update().where(table.c.id == content_id).values(content=new_content, detaModified=datetime.datetime.now())
+            result = conn.execute(update_stmt)
+            conn.commit()
+        logger.debug(f"内容 {content_id} 已被替换")
+        return True
+    except Exception as e:
+        logger.error(f"替换内容 {content_id} 时出错：{e}")
+        return False
+    finally:
+        engine.dispose()
