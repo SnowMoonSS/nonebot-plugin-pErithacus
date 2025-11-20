@@ -1,9 +1,8 @@
 import os
 import json
-import sqlite3
 
-from sqlalchemy import select, create_engine, MetaData, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select, create_engine, MetaData, Table
+from nonebot import logger
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
@@ -51,32 +50,31 @@ async def _(
     if db_path.exists():
         engine = create_engine(f"sqlite:///{db_path}")
         metadata = MetaData()
+        # 反射获取所有表信息
+        metadata.reflect(bind=engine)
 
+        # 遍历所有表
         try:
-            # 反射获取所有表信息
-            metadata.reflect(bind=engine)
-
-            # 遍历所有表
             for table_name in metadata.tables:
+                # 获取表对象
+                table = Table(table_name, metadata, autoload_with=engine)
                 try:
-                    # 获取表对象
-                    table = metadata.tables[table_name]
                     with engine.connect() as conn:
                         stmt = select(table.c.id).where(
                             table.c.content.like(f"%{key}%"),
                             table.c.deleted == False
                         )
                         result = conn.execute(stmt)
-                        rows = result.fetchall()
-
-                        for row in rows:
-                            entry_id = row[0]
+                        contents = result.fetchone()
+                        if contents:
+                            entry_id = int(table_name.split("_")[1])
                             entry = await get_entry_by_id(session, entry_id)
-                            if entry and entry.deleted == False:
+                            if entry and not entry.deleted:
                                 search_results.extend(f"{entry_id}　" + load_media(entry.keyword) + "\n")
-                            else:
-                                continue
-                except Exception:
+                        else:
+                            continue
+                except Exception as e:
+                    logger.info(f"查找内容表时发生了错误：{e}")
                     continue
         finally:
             engine.dispose()
