@@ -64,6 +64,22 @@ async def get_contents(id: int):
     engine.dispose()
     return rows
 
+async def get_all_contents(id: int):
+    """
+    返回 table_name 表中的所有 content
+    包含被标记为删除的 content
+    """
+    table_name = f"Entry_{id}"
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=engine)
+    with engine.connect() as conn:
+        result = conn.execute(select(table))
+        rows = result.fetchall()
+    engine.dispose()
+    return rows
+
 
 async def get_entry(
     session : async_scoped_session,
@@ -160,6 +176,21 @@ def compare_contents(content1: str, content2: str) -> bool:
     clean_content2 = remove_sticker_info(content2)
     return clean_content1 == clean_content2
 
+async def restore_deleted_content(table_id: int, row_id: int):
+    """
+    将 table_name 表中 id 为 row_id 的 content 的 deleted 字段设置为 False
+    """
+    table_name = f"Entry_{table_id}"
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=engine)
+
+    with engine.connect() as conn:
+        update = table.update().where(table.c.id == row_id).values(deleted=False, dateModified=datetime.datetime.now())
+        conn.execute(update)
+        conn.commit()
+    engine.dispose()
 
 async def add_content(table_id: int, content: str):
     """
@@ -167,10 +198,13 @@ async def add_content(table_id: int, content: str):
     """
     table_name = f"Entry_{table_id}"
     # 提取所有的 content
-    rows = await get_contents(table_id)
+    rows = await get_all_contents(table_id)
     for row in rows:
         if compare_contents(row.content, content):
-            return False
+            if row.deleted == False:
+                return False
+            else:
+                await restore_deleted_content(table_id, row.id)
         else:
             continue
 
