@@ -48,7 +48,7 @@ async def _(
     for entry in entries:
         # 检查keyword列和alias列包含key的行
         if key in entry.keyword or (entry.alias and key in entry.alias):
-            search_results.extend(f"{entry.id}　" + load_media(entry.keyword) + "\n")
+            search_results.extend(f"\n{entry.id}　" + load_media(entry.keyword))
             result_list.append(entry.id)
             logger.info(f"在 Index 中找到匹配的词条 {entry.id}，关键词 {entry.keyword}")
     
@@ -80,7 +80,7 @@ async def _(
                                 entry = await get_entry_by_id(session, entry_id)
                                 if entry and not entry.deleted:
                                     result_list.append(entry_id)
-                                    search_results.extend(f"{entry_id}　" + load_media(entry.keyword) + "\n")
+                                    search_results.extend(f"\n{entry_id}　" + load_media(entry.keyword))
                         else:
                             continue
                 except Exception as e:
