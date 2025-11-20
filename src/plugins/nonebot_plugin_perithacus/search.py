@@ -2,13 +2,14 @@ import os
 import json
 import sqlite3
 
-from sqlalchemy import select
+from sqlalchemy import select, create_engine, MetaData, text
+from sqlalchemy.orm import sessionmaker
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 from .command import pe
-from .database import Index
+from .database import Index, get_entry_by_id
 from .lib import load_media
 
 @pe.assign("search")
@@ -46,29 +47,38 @@ async def _(
     
     # 搜索content.db中所有表的content列
     db_path = get_plugin_data_dir() / "content.db"
-    
+
     if db_path.exists():
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # 获取所有表名
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        
-        for table in tables:
-            table_name = table[0]
-            try:
-                # 查询每个表中content列包含key的行
-                cursor.execute(f"SELECT id FROM {table_name} WHERE content LIKE ?", (f"%{key}%",))
-                rows = cursor.fetchall()
-                
-                for row in rows:
-                    entry_id = row[0]
-                    search_results.extend(f"{entry_id}　" + load_media(entry.keyword) + "\n")
-            except sqlite3.Error:
-                # 如果查询出错，跳过该表
-                pass
-        
-        conn.close()
+        engine = create_engine(f"sqlite:///{db_path}")
+        metadata = MetaData()
+
+        try:
+            # 反射获取所有表信息
+            metadata.reflect(bind=engine)
+
+            # 遍历所有表
+            for table_name in metadata.tables:
+                try:
+                    # 获取表对象
+                    table = metadata.tables[table_name]
+                    with engine.connect() as conn:
+                        stmt = select(table.c.id).where(
+                            table.c.content.like(f"%{key}%"),
+                            table.c.deleted == False
+                        )
+                        result = conn.execute(stmt)
+                        rows = result.fetchall()
+
+                        for row in rows:
+                            entry_id = row[0]
+                            entry = await get_entry_by_id(session, entry_id)
+                            if entry and entry.deleted == False:
+                                search_results.extend(f"{entry_id}　" + load_media(entry.keyword) + "\n")
+                            else:
+                                continue
+                except Exception:
+                    continue
+        finally:
+            engine.dispose()
     
     await pe.finish(search_results)
