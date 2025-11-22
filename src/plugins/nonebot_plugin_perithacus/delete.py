@@ -21,7 +21,7 @@ async def _(
     """
 
     # 处理keyword
-    keyword_text = convert_media(keyword.result)
+    keyword_text = await convert_media(keyword.result)
     uni_keyword = UniMessage(keyword.result)
 
     # 处理source

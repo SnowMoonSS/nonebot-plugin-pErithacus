@@ -2,6 +2,7 @@ import datetime
 import json
 
 from apscheduler.triggers.cron import CronTrigger
+from nonebot import logger
 from nonebot.adapters import Event
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session
@@ -32,7 +33,7 @@ async def _(
     """
 
     # 处理keyword
-    keyword_text = convert_media(keyword.result)
+    keyword_text = await convert_media(keyword.result)
     
     # 处理source
     session_id = event.get_session_id()
@@ -88,14 +89,17 @@ async def _(
             else:
                 remove_cron_job(existing_entry.id)
 
-        # 合并到已有 JSON 列表
+        # 将新作用域合并到已有 JSON 列表
+        # 在作用域内执行del命令移除指定作用域
         if scope.available:
             try:
                 scope_list_from_db = json.loads(existing_entry.scope) if existing_entry.scope else []
             except json.JSONDecodeError:
                 scope_list_from_db = []
-            if not any(item in scope_list_from_db for item in scope_list):
-                scope_list_from_db.extend(scope_list)
+            for item in scope_list:
+                if item not in scope_list_from_db:
+                    scope_list_from_db.append(item)
+                    logger.debug(f"添加新的作用域：{item}")
             existing_entry.scope = json.dumps(scope_list_from_db)
 
         # 合并到已有 JSON 列表
