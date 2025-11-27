@@ -27,12 +27,17 @@ perithacus = Alconna(
     ),
     Subcommand(
         "list",
-        Arg("entry_id?", int, notice="列出指定 ID 的词条内容"),
+        Arg("page?#页码", int, notice="列出指定页的词条"),
+        Option("-s|--scope", Args["scope#作用域", str], default=""),
+        Option("-a|--all", Args["isAll#是否列出所有作用域的词条", bool], default=False),
         help_text="列出词条",
     ),
     Subcommand(
         "search|搜索",
-        Arg("keyword", Any, notice="关键词"),
+        Args(
+            Arg("keyword", Any, notice="关键词"),
+            Arg("page?#页码", int, notice="列出指定页的搜索结果"),
+        ),
         help_text="搜索词条",
     ),
     Subcommand(
@@ -43,7 +48,10 @@ perithacus = Alconna(
     ),
     Subcommand(
         "detail|详情",
-        Arg("id", int, notice="词条ID"),
+        Args(
+            Arg("id", int, notice="词条ID"),
+            Arg("page?#页码", int, notice="列出指定页的词条内容"),
+        ),
         Option("-f|--force"),
         help_text="查看指定词条的详细内容",
     ),

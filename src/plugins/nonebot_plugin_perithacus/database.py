@@ -83,6 +83,7 @@ async def get_all_contents(id: int):
 
 async def get_entry(
     session : async_scoped_session,
+
     keyword : str,
     scope_list : list[str],
 ) -> Index | None:
@@ -146,6 +147,41 @@ async def get_entry(
     # 多条时按 dateModified 最新的返回
     best = max(matches, key=lambda e: e.dateModified or e.dateCreate or datetime.datetime.min)
     return best
+
+async def get_entries(
+    session : async_scoped_session,
+
+    scope_list : list[str],
+    isAll : bool = False
+):
+    """
+    返回在 scpoe_list 中且未被删除的词条实体。
+    """
+    # 筛选未删除的条目
+    result = await session.execute(
+        select(Index).where(Index.deleted == False)
+    )
+    # 获取所有未删除的条目
+    entries = result.scalars().all()
+
+    if isAll:
+        return entries
+    else:
+        matches = []
+        for entry in entries:
+            # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
+            try:
+                scope_list_from_db = json.loads(entry.scope) if entry.scope else []
+                if not any(item in scope_list_from_db for item in scope_list):
+                    continue
+            except json.JSONDecodeError:
+                continue
+            matches.append(entry)
+        
+        if not matches:
+            return None
+        else:
+            return matches
 
 async def get_entry_by_id(
     session : async_scoped_session,
