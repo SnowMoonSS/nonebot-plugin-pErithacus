@@ -105,9 +105,19 @@ async def _(
                                 if entry_id not in result_list:
                                     entry = await get_entry_by_id(session, entry_id)
                                     if entry and not entry.deleted:
-                                        result_list.append(entry_id)
+                                        try:
+                                            scope_list_from_db = json.loads(entry.scope) if entry.scope else []
+                                            if any(item in scope_list_from_db for item in scope_list):
+                                                logger.debug(f"词条 {entry.id}，在作用域 {scope_list} 中，加入搜索结果")
+                                                result_list.append(entry_id)
+                                        except json.JSONDecodeError:
+                                            continue
+                                    else:
+                                        logger.debug(f"跳过词条 {entry_id}，该词条已标记为删除")
+                                else:
+                                    logger.debug(f"跳过词条 {entry_id}，该词条已存在搜索结果中")
                             else:
-                                continue
+                                logger.debug(f"未找到包含 {key} 的内容")
                     except Exception as e:
                         logger.info(f"查找内容表时发生了错误：{e}")
                         continue
