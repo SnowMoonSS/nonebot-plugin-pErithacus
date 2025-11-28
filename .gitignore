@@ -145,3 +145,5 @@ config/
 data/
 docs/
 migrations/
+.env.dev
+.env.prod

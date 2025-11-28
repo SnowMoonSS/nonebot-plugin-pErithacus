@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-pErithacus"
-version = "0.1.0"
+version = "1.0.0"
 description = "nonebot-plugin-pErithacus"
 readme = "README.md"
 requires-python = ">=3.9, <4.0"
