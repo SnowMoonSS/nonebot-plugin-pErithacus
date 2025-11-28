@@ -44,7 +44,7 @@ pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户�
 </details>
 
 <details>
-<summary>使用包管理器安装（尚未实现）</summary>
+<summary>使用包管理器安装</summary>
 在 nonebot2 项目的插件目录下, 打开命令行, 根据你使用的包管理器, 输入相应的安装命令
 
 <details open>
@@ -80,7 +80,7 @@ pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户�
 </details>
 
 <details>
-<summary>使用 nbr 安装(使用 uv 管理依赖可用)（尚未实现）</summary>
+<summary>使用 nbr 安装(使用 uv 管理依赖可用)</summary>
 
 [nbr](https://github.com/fllesser/nbr) 是一个基于 uv 的 nb-cli，可以方便地管理 nonebot2
 
