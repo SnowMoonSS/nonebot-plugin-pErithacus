@@ -31,7 +31,7 @@ class Index(Model):
 
 def create_content_list(table_name: str):
     """
-    在 nonebot_plugin_perithacus_replies.db 中创建一个名为 table_name 的表，
+    在 content.db 中创建一个名为 table_name 的表，
     结构为 id:int, content:text, timap:DateTime
     """
     db_path = get_plugin_data_dir() / "content.db"
