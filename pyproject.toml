@@ -1,10 +1,12 @@
 [project]
 name = "nonebot-plugin-pErithacus"
-version = "1.0.5"
+version = "1.0.7"
 description = "pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户设定的关键词自动回复相关内容。该插件提供了完整的词条管理功能，让用户能够轻松创建、编辑和管理自定义回复内容"
 readme = "README.md"
 requires-python = ">=3.9, <4.0"
 dependencies = [
+  "httpx>=0.24.0",
+  "filetype>=1.2.0",
   "nonebot2>=2.4.4",
   "nonebot-adapter-onebot>=2.4.6",
   "nonebot-plugin-localstore>=0.7.4",
@@ -34,7 +36,7 @@ requires = ["uv_build>=0.9.2,<0.10.0"]
 build-backend = "uv_build"
 
 [tool.nonebot]
-plugin_dirs = ["src/plugins"]
+plugin_dirs = ["src"]
 builtin_plugins = []
 [tool.nonebot.plugins]
 "@local" = []
