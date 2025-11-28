@@ -1,5 +1,4 @@
 import os
-import requests
 import json
 import hashlib
 import filetype
