@@ -1,10 +1,26 @@
 [project]
 name = "nonebot-plugin-pErithacus"
 version = "1.0.0"
-description = "nonebot-plugin-pErithacus"
+description = "pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户设定的关键词自动回复相关内容。该插件提供了完整的词条管理功能，让用户能够轻松创建、编辑和管理自定义回复内容"
 readme = "README.md"
 requires-python = ">=3.9, <4.0"
 dependencies = ["nonebot2>=2.4.4", "nonebot-adapter-onebot>=2.4.6", "nonebot-plugin-localstore>=0.7.4", "nonebot-plugin-alconna>=0.60.3", "nonebot-plugin-orm>=0.8.2", "nonebot-plugin-apscheduler>=0.5.0", "nonebot2[fastapi]>=2.4.4"]
+authors = [{ name = "SnowMoonSS" }]
+license = {text = "GPL-3.0-only"}
+classifiers = [
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.14",
+  "Operating System :: OS Independent",
+  "Framework :: Robot Framework"
+]
+keywords = ["nonebot2", "chatbot", "qqbot", "nonebot-plugin"]
+
+[project.urls]
+Homepage = "https://github.com/SnowMoonSS/nonebot-plugin-pErithacus"
+Repository = "https://github.com/SnowMoonSS/nonebot-plugin-pErithacus.git"
+Documentation = "https://github.com/SnowMoonSS/nonebot-plugin-pErithacus/blob/master/README.md"
+Issues = "https://github.com/SnowMoonSS/nonebot-plugin-pErithacus/issues"
 
 [tool.nonebot]
 plugin_dirs = ["src/plugins"]
