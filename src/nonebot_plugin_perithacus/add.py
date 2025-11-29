@@ -2,9 +2,8 @@ import datetime
 import json
 
 from apscheduler.triggers.cron import CronTrigger
-from nonebot import logger
 from nonebot.adapters import Event, Bot
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, Target, get_target
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, get_target
 from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe

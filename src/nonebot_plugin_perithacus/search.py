@@ -8,7 +8,7 @@ from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 from .command import pe
-from .database import Index, get_entry_by_id, get_entries
+from .database import get_entry_by_id, get_entries
 from .lib import load_media, convert_media
 
 @pe.assign("search")
@@ -96,7 +96,7 @@ async def _(
                         with engine.connect() as conn:
                             stmt = select(table.c.id).where(
                                 table.c.content.like(f"%{key}%"),
-                                table.c.deleted == False
+                                ~table.c.deleted
                             )
                             result = conn.execute(stmt)
                             contents = result.fetchone()

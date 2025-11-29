@@ -4,7 +4,7 @@ import re
 
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, Text, DateTime, select, create_engine, MetaData, Table, Column, Integer
-from typing import Optional, Any
+from typing import Optional
 
 from nonebot import logger
 from nonebot_plugin_orm import Model, async_scoped_session
@@ -59,7 +59,7 @@ async def get_contents(id: int):
     metadata = MetaData()
     table = Table(table_name, metadata, autoload_with=engine)
     with engine.connect() as conn:
-        result = conn.execute(select(table).where(table.c.deleted == False))
+        result = conn.execute(select(table).where(~table.c.deleted))
         rows = result.fetchall()
     engine.dispose()
     return rows
@@ -94,7 +94,7 @@ async def get_entry(
     """
     # 筛选未删除的条目
     result = await session.execute(
-        select(Index).where(Index.deleted == False)
+        select(Index).where(~Index.deleted)
     )
     # 获取所有未删除的条目
     entries = result.scalars().all()
@@ -159,7 +159,7 @@ async def get_entries(
     """
     # 筛选未删除的条目
     result = await session.execute(
-        select(Index).where(Index.deleted == False)
+        select(Index).where(~Index.deleted)
     )
     # 获取所有未删除的条目
     entries = result.scalars().all()
@@ -237,7 +237,7 @@ async def add_content(table_id: int, content: str):
     rows = await get_all_contents(table_id)
     for row in rows:
         if compare_contents(row.content, content):
-            if row.deleted == False:
+            if not row.deleted:
                 return False
             else:
                 await restore_deleted_content(table_id, row.id)
@@ -270,7 +270,7 @@ async def delete_content(table_id: int, content_id: int):
     try:
         with engine.connect() as conn:
             update_stmt = table.update().where(table.c.id == content_id).values(deleted=True, dateModified=datetime.datetime.now())
-            result = conn.execute(update_stmt)
+            conn.execute(update_stmt)
             conn.commit()
         logger.debug(f"内容 {content_id} 标记为已删除")
         return True
@@ -301,7 +301,7 @@ async def replace_content(table_id: int, content_id: int, new_content: str):
     try:
         with engine.connect() as conn:
             update_stmt = table.update().where(table.c.id == content_id).values(content=new_content, detaModified=datetime.datetime.now())
-            result = conn.execute(update_stmt)
+            conn.execute(update_stmt)
             conn.commit()
         logger.debug(f"内容 {content_id} 已被替换")
         return True

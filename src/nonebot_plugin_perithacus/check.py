@@ -27,7 +27,7 @@ async def _(
                     aliases.append(load_media(alias))
                 
                 await pe.finish(f"编号：{entry.id}\n" + 
-                                f"词条名：" + keyword + "\n" + 
+                                 "词条名：" + keyword + "\n" + 
                                 f"匹配方式：{entry.matchMethod}\n" +
                                 f"随机：{entry.isRandom}\n" +
                                 f"定时：{entry.cron}\n" +
@@ -37,12 +37,12 @@ async def _(
                                 f"删除：{entry.deleted}\n" +
                                 f"创建时间：{entry.dateCreate}\n" +
                                 f"修改时间：{entry.dateModified}\n" +
-                                "别名：" + aliases
+                                 "别名：" + aliases
                                 )
             else:
                 aliases = None
                 await pe.finish(f"编号：{entry.id}\n" + 
-                                f"词条名：" + keyword + "\n" + 
+                                 "词条名：" + keyword + "\n" + 
                                 f"匹配方式：{entry.matchMethod}\n" +
                                 f"随机：{entry.isRandom}\n" +
                                 f"定时：{entry.cron}\n" +
