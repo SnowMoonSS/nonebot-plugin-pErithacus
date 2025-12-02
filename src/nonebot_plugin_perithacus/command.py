@@ -12,7 +12,11 @@ perithacus = Alconna(
             Arg("keyword", Any, notice="词条名"),
             Arg("content", MultiVar(Any), notice="回复内容"),
         ),
-        Option("-m|--match", Args["match_method#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
+        Option(
+            "-m|--match",
+            Args["match_method#匹配方式（精准/模糊）", "精准|模糊"],
+            default="精准"
+        ),
         Option("-r|--random", Args["is_random#是否随机回复", bool], default=True),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
@@ -30,7 +34,7 @@ perithacus = Alconna(
         "list",
         Arg("page?#页码", int, notice="列出指定页的词条"),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
-        Option("-a|--all", Args["is_all#是否列出所有作用域的词条", bool], default=False),
+        Option("-a|--all"),
         help_text="列出词条",
     ),
     Subcommand(
@@ -40,7 +44,11 @@ perithacus = Alconna(
             Arg("page?#页码", int, notice="列出指定页的搜索结果"),
         ),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
-        Option("-a|--all", Args["is_all#是否列出所有作用域的搜索结果", bool], default=False),
+        Option(
+            "-a|--all",
+            Args["is_all#是否列出所有作用域的搜索结果", bool],
+            default=False
+        ),
         help_text="搜索词条",
     ),
     Subcommand(
@@ -64,12 +72,16 @@ perithacus = Alconna(
             Arg("keyword", str, notice="词条名"),
         ),
         Option("-r|--random", Args["is_random#是否随机回复", bool], default=True),
-        Option("-m|--match", Args["match_method#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
+        Option(
+            "-m|--match",
+            Args["match_method#匹配方式（精准/模糊）", "精准|模糊"],
+            default="精准"
+        ),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域群号", str], default=""),
         Option("-re|--regex", Args["reg#正则匹配的正则表达式", str], default=""),
         Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
-        Option("-d|--delete", Args["delete_id", int], default=0, help_text="删除指定id的回复"),
+        Option("-d|--delete", Args["delete_id#删除指定id的回复", int], default=0),
         Option(
             "-rep|--replace",
             Args(
@@ -87,8 +99,8 @@ perithacus = Alconna(
 pe = on_alconna(perithacus, skip_for_unmatch=False, use_cmd_start=True, aliases={"pe"})
 
 @pe.assign("$main")
-async def handle_main():
+async def handle_main() -> None:
     await pe.finish("发送“pe --help”查看帮助")
 
 
-all = on_message()
+on_every_message = on_message()

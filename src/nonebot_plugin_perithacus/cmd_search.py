@@ -1,15 +1,19 @@
 import json
+from typing import TYPE_CHECKING
 
-from sqlalchemy import select, create_engine, MetaData, Table
 from nonebot import logger
-from nonebot.adapters import Event
-from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
+from sqlalchemy import MetaData, Table, create_engine, select
+from sqlalchemy.exc import SQLAlchemyError
 
 from .command import pe
-from .database import get_entry_by_id, get_entries
-from .lib import load_media, convert_media
+from .database import get_entries, get_entry_by_id
+from .lib import convert_media, load_media
+
+if TYPE_CHECKING:
+    from nonebot.adapters import Event
+    from nonebot_plugin_orm import async_scoped_session
 
 @pe.assign("search")
 async def _(
@@ -44,40 +48,41 @@ async def _(
     else:
         scope_list = scope.result.split(",")
         for s in scope_list:
-            if not (s.startswith("g") or s.startswith("u")):
+            if not s.startswith(("g", "u")):
                 await pe.finish("scope参数必须以g或u开头")
 
     keyword_text = await convert_media(keyword.result)
     pe_message_list = json.loads(keyword_text)
+
     # 检查pe_message_list中的每个元素
-    has_media = any(item.get("media") for item in pe_message_list if isinstance(item, dict))
-    has_at = any(item.get("type") == "at" for item in pe_message_list if isinstance(item, dict))
-    
-    if has_media:
-        # 如果有一个或多个元素中存在"media": True
-        # 使用第一个含有media的项的id作为key
-        key = next((item['id'] for item in pe_message_list if isinstance(item, dict) and item.get("media")))
-    elif has_at:
-        # elif有一个或多个元素中的"type"为"at"
-        # 使用第一个type为at的项的target作为key
-        key = next((item['target'] for item in pe_message_list if isinstance(item, dict) and item.get("type") == "at"))
-    else:
-        # 其他情况使用纯文本
+    key = None
+    for item in pe_message_list:
+        if not isinstance(item, dict):
+            continue
+        if item.get("media"):
+            key = item["id"]
+            break
+        if item.get("type") == "at":
+            key = item["target"]
+            break
+    if not key:
         key = UniMessage(keyword.result).extract_plain_text()
-    
+
     if is_all.available and is_all.result:
         entries = await get_entries(session, scope_list, is_all=True)
     else:
         entries = await get_entries(session, scope_list)
-    
+
     if entries:
         result_list = []
         for entry in entries:
             # 检查keyword列和alias列包含key的行
             if key in entry.keyword or (entry.alias and key in entry.alias):
                 result_list.append(entry.id)
-                logger.info(f"在 Index 中找到匹配的词条 {entry.id}，关键词 {entry.keyword}")
-        
+                logger.info(
+                    f"在 Index 中找到匹配的词条 {entry.id}，关键词 {entry.keyword}"
+                )
+
         # 搜索content.db中所有表的content列
         db_path = get_plugin_data_dir() / "content.db"
 
@@ -118,7 +123,7 @@ async def _(
                                     logger.debug(f"跳过词条 {entry_id}，该词条已存在搜索结果中")
                             else:
                                 logger.debug(f"未找到包含 {key} 的内容")
-                    except Exception as e:
+                    except SQLAlchemyError as e:
                         logger.info(f"查找内容表时发生了错误：{e}")
                         continue
             finally:
@@ -127,19 +132,22 @@ async def _(
         # 分页处理
         page_size = 5
         total_count = len(result_list)
-        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
-        
+        if total_count > 0:
+            total_pages = (total_count + page_size - 1) // page_size
+        else:
+            total_pages = 1
+
         # 获取当前页码
         current_page = page.result if page.available and page.result > 0 else 1
         current_page = min(current_page, total_pages)  # 确保不超过总页数
-        
+
         # 计算当前页的条目范围
         start_index = (current_page - 1) * page_size
         end_index = min(start_index + page_size, total_count)
-        
+
         # 构建搜索结果消息
         search_results = UniMessage(f"搜索结果（第 {current_page}/{total_pages} 页）：")
-        
+
         # 显示当前页的结果
         for i in range(start_index, end_index):
             entry_id = result_list[i]
