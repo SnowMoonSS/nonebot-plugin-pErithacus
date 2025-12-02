@@ -49,7 +49,7 @@ async def _(
                 msg.extend(
                     f"{row.id}　" +
                     load_media(row.content) +
-                    f"　时间: {row.dateModified}\n"
+                    f"　时间: {row.date_modified}\n"
                 )
 
             await pe.finish(msg)

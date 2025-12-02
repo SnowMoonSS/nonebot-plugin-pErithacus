@@ -125,7 +125,7 @@ async def _(
             if reg.available:
                 existing_entry.reg = reg.result
 
-            existing_entry.dateModified=datetime.now(UTC)
+            existing_entry.date_modified=datetime.now(UTC)
 
             # 提交修改并刷新实体
             session.add(existing_entry)

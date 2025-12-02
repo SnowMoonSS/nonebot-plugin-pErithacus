@@ -39,8 +39,8 @@ async def _(
                                 f"正则表达式：{entry.reg}\n" +
                                 f"来源：{entry.source}\n" +
                                 f"删除：{entry.deleted}\n" +
-                                f"创建时间：{entry.dateCreate}\n" +
-                                f"修改时间：{entry.dateModified}\n" +
+                                f"创建时间：{entry.date_create}\n" +
+                                f"修改时间：{entry.date_modified}\n" +
                                  "别名：" + aliases
                                 )
             else:
@@ -54,8 +54,8 @@ async def _(
                                 f"正则表达式：{entry.reg}\n" +
                                 f"来源：{entry.source}\n" +
                                 f"删除：{entry.deleted}\n" +
-                                f"创建时间：{entry.dateCreate}\n" +
-                                f"修改时间：{entry.dateModified}\n" +
+                                f"创建时间：{entry.date_create}\n" +
+                                f"修改时间：{entry.date_modified}\n" +
                                 f"别名：{aliases}"
                                 )
         elif not force.available and entry.deleted:

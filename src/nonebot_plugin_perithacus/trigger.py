@@ -40,7 +40,7 @@ async def _(
                 content = random.choice(contents)
                 logger.debug(f"随机选择内容 ID {content.id} 进行发送")
             else:
-                content = max(contents, key=lambda x: x.dateModified)
+                content = max(contents, key=lambda x: x.date_modified)
                 logger.debug(f"选择最新内容 ID {content.id} 进行发送")
             await UniMessage.finish(load_media(content.content))
         else:
