@@ -1,7 +1,6 @@
 # requirements.in
+httpx
 filetype
-nonebot2
-nonebot-adapter-onebot
 nonebot-plugin-localstore
 nonebot-plugin-alconna
 nonebot-plugin-orm[default]

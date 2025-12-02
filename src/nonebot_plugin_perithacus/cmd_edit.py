@@ -18,8 +18,8 @@ async def _(
     session : async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
-    matchMethod: Match[str] = AlconnaMatch("matchMethod"),
-    isRandom: Match[bool] = AlconnaMatch("isRandom"),
+    match_method: Match[str] = AlconnaMatch("match_method"),
+    is_random: Match[bool] = AlconnaMatch("is_random"),
     cron: Match[str] = AlconnaMatch("cron"),
     scope: Match[str] = AlconnaMatch("scope"),
     reg: Match[str] = AlconnaMatch("reg"),
@@ -76,11 +76,11 @@ async def _(
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
         # 更新已有条目（只在用户提供对应参数时修改）
-        if matchMethod.available:
-            existing_entry.matchMethod = matchMethod.result
+        if match_method.available:
+            existing_entry.match_method = match_method.result
 
-        if isRandom.available:
-            existing_entry.isRandom = isRandom.result
+        if is_random.available:
+            existing_entry.is_random = is_random.result
 
         if cron.available:
             existing_entry.cron = cron_expressions

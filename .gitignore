@@ -144,7 +144,6 @@ cache/
 config/
 data/
 docs/
-migrations/
 .env.dev
 .env.prod
 .ruff_cache/

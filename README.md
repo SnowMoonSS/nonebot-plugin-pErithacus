@@ -9,13 +9,13 @@
 [![uv](https://img.shields.io/badge/package%20manager-uv-black?style=flat-square&logo=uv)](https://github.com/astral-sh/uv)
 <br/>
 [![ruff](https://img.shields.io/badge/code%20style-ruff-black?style=flat-square&logo=ruff)](https://github.com/astral-sh/ruff)
-[![pre-commit](https://results.pre-commit.ci/badge/github/SnowMoonSS/nonebot-plugin-pErithacus/master.svg)](https://results.pre-commit.ci/latest/github/SnowMoonSS/nonebot-plugin-pErithacus/master)
 
 </div>
 
 ## 简介
 
 pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户设定的关键词自动回复相关内容。该插件提供了完整的词条管理功能，让用户能够轻松创建、编辑和管理自定义回复内容。
+pErithacus，名称来自灰鹦鹉（Psittacus erithacus），具有极强的语言模仿能力
 
 ## 功能特性
 

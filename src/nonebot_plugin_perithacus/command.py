@@ -1,7 +1,8 @@
-from arclet.alconna import Alconna, Arg, Args, Subcommand, Option, CommandMeta, MultiVar
+from typing import Any
+
+from arclet.alconna import Alconna, Arg, Args, CommandMeta, MultiVar, Option, Subcommand
 from nonebot import on_message
 from nonebot_plugin_alconna import on_alconna
-from nepattern import Any
 
 perithacus = Alconna(
     "perithacus",
@@ -11,8 +12,8 @@ perithacus = Alconna(
             Arg("keyword", Any, notice="词条名"),
             Arg("content", MultiVar(Any), notice="回复内容"),
         ),
-        Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
-        Option("-r|--random", Args["isRandom#是否随机回复", bool], default=True),
+        Option("-m|--match", Args["match_method#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
+        Option("-r|--random", Args["is_random#是否随机回复", bool], default=True),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
         Option("-R|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
@@ -62,8 +63,8 @@ perithacus = Alconna(
         Args(
             Arg("keyword", str, notice="词条名"),
         ),
-        Option("-r|--random", Args["isRandom#是否随机回复", bool], default=True),
-        Option("-m|--match", Args["matchMethod#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
+        Option("-r|--random", Args["is_random#是否随机回复", bool], default=True),
+        Option("-m|--match", Args["match_method#匹配方式（精准/模糊）", "精准|模糊"], default="精准"),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域群号", str], default=""),
         Option("-re|--regex", Args["reg#正则匹配的正则表达式", str], default=""),

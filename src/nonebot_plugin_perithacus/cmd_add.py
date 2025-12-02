@@ -1,15 +1,19 @@
-import datetime
 import json
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from apscheduler.triggers.cron import CronTrigger
-from nonebot.adapters import Event, Bot
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, get_target
-from nonebot_plugin_orm import async_scoped_session
 
-from .command import pe
-from .database import Index, create_content_list, add_content, get_entry
-from .lib import save_media, load_media
 from .apscheduler import add_cron_job, remove_cron_job
+from .command import pe
+from .database import Index, add_content, create_content_list, get_entry
+from .lib import load_media, save_media
+
+if TYPE_CHECKING:
+    from nonebot.adapters import Bot, Event
+    from nonebot_plugin_orm import async_scoped_session
+
 
 @pe.assign("add")
 async def _(
@@ -19,8 +23,8 @@ async def _(
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     content: Match[UniMessage] = AlconnaMatch("content"),
-    matchMethod: Match[str] = AlconnaMatch("matchMethod"),
-    isRandom: Match[bool] = AlconnaMatch("isRandom"),
+    match_method: Match[str] = AlconnaMatch("match_method"),
+    is_random: Match[bool] = AlconnaMatch("is_random"),
     cron: Match[str] = AlconnaMatch("cron"),
     scope: Match[str] = AlconnaMatch("scope"),
     reg: Match[str] = AlconnaMatch("reg"),
@@ -48,8 +52,9 @@ async def _(
         # {userid} 格式，直接使用 userid
         user_id = session_id
         this_source = f"u{user_id}"
-    
-    # 验证 cron 表达式的基本格式，当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
+
+    # 验证 cron 表达式的基本格式，
+    # 当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
     if cron.available:
         if cron.result != "None":
             cron_expressions = cron.result.replace("#", " ")
@@ -61,14 +66,14 @@ async def _(
             cron_expressions = None
     else:
         cron_expressions = None
-    
+
     # 处理scope
     if not scope.available:
         scope_list = [this_source]
     else:
         scope_list = scope.result.split(",")
         for s in scope_list:
-            if not (s.startswith("g") or s.startswith("u")):
+            if not s.startswith(("g", "u")):
                 await pe.finish("scope参数必须以g或u开头")
 
     # 处理alias
@@ -79,11 +84,11 @@ async def _(
     if existing_entry:
         if await add_content(existing_entry.id, content_text):
             # 更新已有条目（只在用户提供对应参数时修改）
-            if matchMethod.available:
-                existing_entry.matchMethod = matchMethod.result
+            if match_method.available:
+                existing_entry.match_method = match_method.result
 
-            if isRandom.available:
-                existing_entry.isRandom = isRandom.result
+            if is_random.available:
+                existing_entry.is_random = is_random.result
 
             if cron.available:
                 existing_entry.cron = cron_expressions
@@ -95,7 +100,10 @@ async def _(
             if scope.available:
                 # 合并到已有 JSON 列表
                 try:
-                    scope_list_from_db = json.loads(existing_entry.scope) if existing_entry.scope else []
+                    if existing_entry.scope:
+                        scope_list_from_db = json.loads(existing_entry.scope)
+                    else:
+                        scope_list_from_db = []
                 except json.JSONDecodeError:
                     scope_list_from_db = []
                 if not any(item in scope_list_from_db for item in scope_list):
@@ -105,7 +113,10 @@ async def _(
             # 合并到已有 JSON 列表
             if alias.available:
                 # 解析已有别名列表
-                alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
+                if existing_entry.alias:
+                    alias_list = json.loads(existing_entry.alias)
+                else:
+                    alias_list = []
                 new_alias = alias_text
                 if new_alias and new_alias not in alias_list:
                     alias_list.append(new_alias)
@@ -114,7 +125,7 @@ async def _(
             if reg.available:
                 existing_entry.reg = reg.result
 
-            existing_entry.dateModified=datetime.datetime.now()
+            existing_entry.dateModified=datetime.now(UTC)
 
             # 提交修改并刷新实体
             session.add(existing_entry)
@@ -122,17 +133,22 @@ async def _(
             await session.refresh(existing_entry)
 
             uni_keyword = load_media(existing_entry.keyword)
-            await pe.finish(f"词条 {existing_entry.id} : " + uni_keyword + " 加入了新的内容")
+            await pe.finish(
+                f"词条 {existing_entry.id} : " + uni_keyword + " 加入了新的内容"
+                )
         else:
             uni_keyword = load_media(existing_entry.keyword)
-            await pe.finish(f"词条 {existing_entry.id} : " + uni_keyword + " 已存在该内容", reply_to=True)
+            await pe.finish(
+                f"词条 {existing_entry.id} : " + uni_keyword + " 已存在该内容",
+                reply_to=True
+                )
     else:
         target = get_target(event, bot)
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         new_entry = Index(
             keyword = keyword_text,
-            matchMethod = matchMethod.result if matchMethod.available else "精准",
-            isRandom = isRandom.result if isRandom.available else True,
+            match_method = match_method.result if match_method.available else "精准",
+            is_random = is_random.result if is_random.available else True,
             cron = cron_expressions if cron.available else None,
             scope = json.dumps(scope_list),
             reg = reg.result if reg.available else None,
@@ -149,4 +165,6 @@ async def _(
             add_cron_job(new_entry.id, cron_expressions)
 
         uni_keyword = load_media(new_entry.keyword)
-        await pe.finish(f"词条 {new_entry.id} : " + uni_keyword + " 已创建并加入了新的内容")
+        await pe.finish(
+            f"词条 {new_entry.id} : " + uni_keyword + " 已创建并加入了新的内容"
+            )

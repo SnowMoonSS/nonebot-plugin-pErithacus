@@ -3,17 +3,14 @@ name = "nonebot-plugin-pErithacus"
 version = "1.0.8"
 description = "pErithacus 是一个基于 NoneBot2 框架的聊天插件，可以根据用户设定的关键词自动回复相关内容。该插件提供了完整的词条管理功能，让用户能够轻松创建、编辑和管理自定义回复内容"
 readme = "README.md"
-requires-python = ">=3.9, <4.0"
+requires-python = ">=3.10, <4.0"
 dependencies = [
   "httpx>=0.24.0",
   "filetype>=1.2.0",
-  "nonebot2>=2.4.4",
-  "nonebot-adapter-onebot>=2.4.6",
   "nonebot-plugin-localstore>=0.7.4",
   "nonebot-plugin-alconna>=0.60.3",
-  "nonebot-plugin-orm>=0.8.2",
+  "nonebot-plugin-orm[default]>=0.8.2",
   "nonebot-plugin-apscheduler>=0.5.0",
-  "nonebot2[fastapi]>=2.4.4"
 ]
 authors = [{ name = "SnowMoonSS" }]
 license = "GPL-3.0-only"
@@ -25,6 +22,12 @@ classifiers = [
 ]
 keywords = ["nonebot2", "chatbot", "qqbot", "nonebot-plugin"]
 
+[project.optional-dependencies]
+dev = [
+    "pyright[nodejs]",
+    "ruff"
+]
+
 [project.urls]
 Homepage = "https://github.com/SnowMoonSS/nonebot-plugin-pErithacus"
 Repository = "https://github.com/SnowMoonSS/nonebot-plugin-pErithacus.git"
@@ -35,9 +38,16 @@ Issues = "https://github.com/SnowMoonSS/nonebot-plugin-pErithacus/issues"
 requires = ["uv_build>=0.9.2,<0.10.0"]
 build-backend = "uv_build"
 
+[tool.nonebot.adapters]
+nonebot-adapter-onebot = [
+    { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" }
+]
+"@local" = []
+
 [tool.nonebot]
 plugin_dirs = ["src"]
 builtin_plugins = []
+
 [tool.nonebot.plugins]
 "@local" = []
 nonebot-plugin-localstore = ["nonebot_plugin_localstore"]
@@ -45,7 +55,76 @@ nonebot-plugin-alconna = ["nonebot_plugin_alconna"]
 nonebot-plugin-orm = ["nonebot_plugin_orm"]
 nonebot-plugin-apscheduler = ["nonebot_plugin_apscheduler"]
 
+[tool.ruff]
+line-length = 88
+target-version = "py314"
 
-[tool.nonebot.adapters]
-"@local" = []
-nonebot-adapter-onebot = [{name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11"}]
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.ruff.lint]
+# For more rules, see https://docs.astral.sh/ruff/rules/.
+select = [
+    "F",     # Pyflakes
+    "W",     # pycodestyle warnings
+    "E",     # pycodestyle errors
+    "I",     # isort
+    "C90",   # mccabe
+    "N",     # pep8-naming
+    "PL",    # pylint
+    "UP",    # pyupgrade
+    "YTT",   # flake8-2020
+    "ANN",   # flake8-annotations
+    "ASYNC", # flake8-async
+    "BLE",   # flake8-blind-except
+    "FBT",   # flake8-boolean-trap
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "COM",   # flake8-commas
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "T10",   # flake8-debugger
+    "ICN",   # flake8-import-conventions
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PYI",   # flake8-pyi
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SIM",   # flake8-simplify
+    "SLOT",  # flake8-slots
+    "TID",   # flake8-tidy-imports
+    "TC",    # flake8-type-checking
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    # "ERA",   # eradicate
+    "FAST",  # FastAPI
+    "PERF",  # Perflint
+    "PGH",   # pygrep-hooks
+    "FURB",  # refurb
+    "TRY",   # tryceratops
+    "RUF",   # Ruff-specific rules
+]
+ignore = [
+    "E402",    # module-import-not-at-top-of-file  # nonebot2 require() violates this
+    "B008",    # function-call-in-default-argument  # nonebot2 Depends() without Annotated violates this
+    "UP037",   # quoted-annotation
+    # "RUF001",  # ambiguous-unicode-character-string
+    # "RUF002",  # ambiguous-unicode-character-docstring
+    # "RUF003",  # ambiguous-unicode-character-comment
+    # "ANN201",  # missing-return-type-undocumented-public-function
+    "ANN202",  # missing-return-type-private-function
+    "ANN401",  # any-type
+    "COM812",  # missing-trailing-comma
+    "PLC0415", # import-outside-top-level
+]
+allowed-confusables = ["，", "。", "“", "”", "：", "；", "？", "！", "【", "】", "《", "》", "…", "—", "（", "）", "、"]
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
+
+[tool.pyright]
+# For Pylance/Pyright configurations, see https://microsoft.github.io/pyright/#/configuration.
+pythonVersion = "3.14"
+pythonPlatform = "All"
+typeCheckingMode = "standard"

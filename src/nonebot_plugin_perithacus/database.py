@@ -17,8 +17,8 @@ from .lib import load_media
 class Index(Model):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     keyword: Mapped[str] = mapped_column(Text, nullable=False, comment="词条名")
-    matchMethod: Mapped[str] = mapped_column(String(8), default="精准", comment="匹配方式")
-    isRandom: Mapped[bool] = mapped_column(Boolean, default=True, comment="是否随机回复")
+    match_method: Mapped[str] = mapped_column(String(8), default="精准", comment="匹配方式")
+    is_random: Mapped[bool] = mapped_column(Boolean, default=True, comment="是否随机回复")
     cron: Mapped[Optional[str]] = mapped_column(String(64), default=None, comment="定时cron表达式")
     scope: Mapped[str] = mapped_column(Text, default="[]", comment="作用域（数组，每个数组代表一个作用域）")
     reg: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None, comment="正则表达式")
@@ -112,11 +112,11 @@ async def get_entry(
             continue
 
         # 直接匹配 keyword
-        if entry.keyword == keyword and entry.matchMethod == "精准":
+        if entry.keyword == keyword and entry.match_method == "精准":
             matches.append(entry)
             logger.debug(f"匹配词条 {entry.id}, 精准匹配")
             continue
-        elif entry.matchMethod == "模糊" and UniMessage(load_media(keyword)).only(AlconnaText) and entry.reg is None:
+        elif entry.match_method == "模糊" and UniMessage(load_media(keyword)).only(AlconnaText) and entry.reg is None:
             key = load_media(keyword).extract_plain_text()
             entry_key = load_media(entry.keyword).extract_plain_text()
             if key in entry_key:

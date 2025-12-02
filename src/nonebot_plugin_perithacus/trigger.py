@@ -36,7 +36,7 @@ async def _(
         contents = await get_contents(existing_entry.id)
         if contents:
             logger.debug("找到匹配的词条内容")
-            if existing_entry.isRandom:
+            if existing_entry.is_random:
                 content = random.choice(contents)
                 logger.debug(f"随机选择内容 ID {content.id} 进行发送")
             else:
