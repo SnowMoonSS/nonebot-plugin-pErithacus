@@ -152,7 +152,7 @@ async def get_entries(
     session : async_scoped_session,
 
     scope_list : list[str],
-    isAll : bool = False
+    is_all : bool = False
 ):
     """
     返回在 scpoe_list 中且未被删除的词条实体。
@@ -164,7 +164,7 @@ async def get_entries(
     # 获取所有未删除的条目
     entries = result.scalars().all()
 
-    if isAll:
+    if is_all:
         return entries
     else:
         matches = []

@@ -30,7 +30,7 @@ perithacus = Alconna(
         "list",
         Arg("page?#页码", int, notice="列出指定页的词条"),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
-        Option("-a|--all", Args["isAll#是否列出所有作用域的词条", bool], default=False),
+        Option("-a|--all", Args["is_all#是否列出所有作用域的词条", bool], default=False),
         help_text="列出词条",
     ),
     Subcommand(
@@ -40,7 +40,7 @@ perithacus = Alconna(
             Arg("page?#页码", int, notice="列出指定页的搜索结果"),
         ),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
-        Option("-a|--all", Args["isAll#是否列出所有作用域的搜索结果", bool], default=False),
+        Option("-a|--all", Args["is_all#是否列出所有作用域的搜索结果", bool], default=False),
         help_text="搜索词条",
     ),
     Subcommand(

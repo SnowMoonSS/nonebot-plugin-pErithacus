@@ -19,7 +19,7 @@ async def _(
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     page: Match[int] = AlconnaMatch("page"),
     scope: Match[str] = AlconnaMatch("scope"),
-    isAll: Match[bool] = AlconnaMatch("isAll"),
+    is_all: Match[bool] = AlconnaMatch("is_all"),
 ):
     """
     搜索词条。
@@ -65,8 +65,8 @@ async def _(
         # 其他情况使用纯文本
         key = UniMessage(keyword.result).extract_plain_text()
     
-    if isAll.available and isAll.result:
-        entries = await get_entries(session, scope_list, isAll=True)
+    if is_all.available and is_all.result:
+        entries = await get_entries(session, scope_list, is_all=True)
     else:
         entries = await get_entries(session, scope_list)
     

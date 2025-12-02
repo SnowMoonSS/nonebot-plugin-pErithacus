@@ -1,9 +1,14 @@
-from nonebot.adapters import Event
-from nonebot_plugin_alconna import UniMessage, AlconnaMatch, Match
-from nonebot_plugin_orm import async_scoped_session
+from typing import TYPE_CHECKING
+
+from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 
 from .command import pe
 from .database import get_entries
+
+if TYPE_CHECKING:
+    from nonebot.adapters import Event
+    from nonebot_plugin_orm import async_scoped_session
+
 
 @pe.assign("list")
 async def _(
@@ -12,7 +17,7 @@ async def _(
 
     page: Match[int] = AlconnaMatch("page"),
     scope: Match[str] = AlconnaMatch("scope"),
-    isAll: Match[bool] = AlconnaMatch("isAll"),
+    is_all: Match[bool] = AlconnaMatch("is_all"),
 ):
     """
     列出所有词条。
@@ -37,11 +42,11 @@ async def _(
     else:
         scope_list = scope.result.split(",")
         for s in scope_list:
-            if not (s.startswith("g") or s.startswith("u")):
+            if not s.startswith(("g", "u")):
                 await pe.finish("scope参数必须以g或u开头")
 
-    if isAll.available and isAll.result:
-        entries = await get_entries(session, scope_list, isAll=True)
+    if is_all.available and is_all.result:
+        entries = await get_entries(session, scope_list, is_all=True)
     else:
         entries = await get_entries(session, scope_list)
 
@@ -49,12 +54,15 @@ async def _(
         # 分页处理
         page_size = 5
         total_count = len(entries)
-        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
-        
+        if total_count > 0:
+            total_pages = (total_count + page_size - 1) // page_size
+        else:
+            total_pages = 1
+
         # 获取当前页码
         current_page = page.result if page.available and page.result > 0 else 1
         current_page = min(current_page, total_pages)  # 确保不超过总页数
-        
+
         # 计算当前页的条目范围
         start_index = (current_page - 1) * page_size
         end_index = min(start_index + page_size, total_count)
@@ -64,9 +72,9 @@ async def _(
         # 显示当前页的条目
         for i in range(start_index, end_index):
             entry = entries[i]
-            id = entry.id
+            entry_id = entry.id
             uni_keyword = UniMessage.load(entry.keyword)
-            message.extend(f"\n{id}：" + uni_keyword)
+            message.extend(f"\n{entry_id}：" + uni_keyword)
     else:
         message = UniMessage("尚无词条，使用 pe add 添加词条")
 
