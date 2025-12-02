@@ -1,16 +1,19 @@
-import datetime
 import json
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from apscheduler.triggers.cron import CronTrigger
 from nonebot import logger
-from nonebot.adapters import Event
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
-from nonebot_plugin_orm import async_scoped_session
 
-from .command import pe
-from .database import get_entry, delete_content, replace_content
-from .lib import save_media, convert_media
 from .apscheduler import add_cron_job, remove_cron_job
+from .command import pe
+from .database import delete_content, get_entry, replace_content
+from .lib import convert_media, save_media
+
+if TYPE_CHECKING:
+    from nonebot.adapters import Event
+    from nonebot_plugin_orm import async_scoped_session
 
 @pe.assign("edit")
 async def _(
@@ -34,7 +37,7 @@ async def _(
 
     # 处理keyword
     keyword_text = await convert_media(keyword.result)
-    
+
     # 处理source
     session_id = event.get_session_id()
     # 根据 session_id 格式设置 source 变量
@@ -47,7 +50,8 @@ async def _(
         user_id = session_id
         this_source = f"u{user_id}"
 
-    # 验证 cron 表达式的基本格式，当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
+    # 验证 cron 表达式的基本格式，
+    # 当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
     if cron.available:
         if cron.result != "None":
             cron_expressions = cron.result.replace("#", " ")
@@ -59,14 +63,14 @@ async def _(
             cron_expressions = None
     else:
         cron_expressions = None
-    
+
     # 处理scope
     if not scope.available:
         scope_list = [this_source]
     else:
         scope_list = scope.result.split(",")
         for s in scope_list:
-            if not (s.startswith("g") or s.startswith("u")):
+            if not s.startswith(("g", "u")):
                 await pe.finish("scope参数必须以g或u开头")
 
     # 处理alias
@@ -93,7 +97,10 @@ async def _(
         # 在作用域内执行del命令移除指定作用域
         if scope.available:
             try:
-                scope_list_from_db = json.loads(existing_entry.scope) if existing_entry.scope else []
+                if existing_entry.scope:
+                    scope_list_from_db = json.loads(existing_entry.scope)
+                else:
+                    scope_list_from_db = []
             except json.JSONDecodeError:
                 scope_list_from_db = []
             for item in scope_list:
@@ -105,7 +112,10 @@ async def _(
         # 合并到已有 JSON 列表
         if alias.available:
             # 解析已有别名列表
-            alias_list = json.loads(existing_entry.alias) if existing_entry.alias else []
+            if existing_entry.alias:
+                alias_list = json.loads(existing_entry.alias)
+            else:
+                alias_list = []
             new_alias = alias_text
             if new_alias and new_alias not in alias_list:
                 alias_list.append(new_alias)
@@ -114,13 +124,15 @@ async def _(
         if reg.available:
             existing_entry.reg = reg.result
 
-        existing_entry.dateModified=datetime.datetime.now()
+        existing_entry.dateModified=datetime.now(UTC)
 
         # 提交修改并刷新实体
         session.add(existing_entry)
         await session.commit()
         await session.refresh(existing_entry)
-        msg = UniMessage(f"词条 {existing_entry.id} : " + UniMessage(keyword.result) + " 修改成功！")
+        msg = UniMessage(
+            f"词条 {existing_entry.id} : " + UniMessage(keyword.result) + " 修改成功！"
+        )
 
         if delete_id.available:
             # 删除指定的内容
@@ -129,16 +141,18 @@ async def _(
                 msg.append("\n删除内容成功！")
             else:
                 msg.append("\n删除内容失败，请检查内容编号是否正确")
-        
+
         if replace_id.available and content.available:
             # 替换指定的内容
             content_text = await save_media(content.result)
-            result = await replace_content(existing_entry.id, replace_id.result, content_text)
+            result = await replace_content(
+                existing_entry.id, replace_id.result, content_text
+                )
             if result:
                 msg.append("\n替换内容成功！")
             else:
                 msg.append("\n替换内容失败，请检查内容编号是否正确")
-        
+
         await pe.finish(msg)
     else:
         await pe.finish("词条: " + UniMessage(keyword.result) + " 不存在")
