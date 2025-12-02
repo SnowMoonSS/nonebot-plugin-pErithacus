@@ -1,20 +1,21 @@
-import os
-import json
 import hashlib
-import filetype
+import json
+import os
 import tempfile
-import httpx
-
 from pathlib import Path
+
+import filetype
+import httpx
 from nonebot import logger
-from nonebot_plugin_localstore import get_plugin_data_dir
 from nonebot_plugin_alconna import UniMessage
+from nonebot_plugin_localstore import get_plugin_data_dir
 
 media_save_dir = get_plugin_data_dir() / "media"
 
 async def download_media(
         url: str,
         save_dir: Path,
+        *,
         json: bool = False
 ) -> Path | None:
     """
@@ -34,7 +35,7 @@ async def download_media(
         md5_hash = hashlib.md5()
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:  # noqa: SIM117
                 async with client.stream("GET", url) as response:
                     response.raise_for_status()
 
@@ -46,19 +47,25 @@ async def download_media(
 
             tmp_file.flush()
             os.fsync(tmp_file.fileno())
-
-        except Exception as e:
+        except httpx.HTTPError as e:
+            # 包括连接错误、超时、4xx/5xx 等
             tmp_path.unlink(missing_ok=True)
-            logger.info(f"下载或写入失败: {e}")
+            logger.error(f"HTTP 请求失败: {e}")
+            return None
+
+        except OSError as e:
+            # 文件写入、fsync、磁盘空间、权限等问题
+            tmp_path.unlink(missing_ok=True)
+            logger.error(f"文件 I/O 错误: {e}")
             return None
 
     # 识别扩展名（filetype 是同步库，但很快）
     try:
         kind = filetype.guess(str(tmp_path))
-        extension = '.' + kind.extension if kind else '.bin'
-    except Exception as e:
-        logger.info(f"文件类型识别失败: {e}")
-        extension = '.bin'
+        extension = "." + kind.extension if kind else ".bin"
+    except OSError as e:
+        logger.info(f"文件类型识别失败({tmp_path}): {e}")
+        extension = ".bin"
 
     # 生成最终路径
     md5_hex = md5_hash.hexdigest().upper()
@@ -67,7 +74,7 @@ async def download_media(
     if json:
         tmp_path.unlink(missing_ok=True)
         return final_path
-    elif final_path.exists():
+    if final_path.exists():
         logger.info(f"文件已存在，跳过: {final_path}")
         tmp_path.unlink(missing_ok=True)
         return final_path
@@ -76,11 +83,13 @@ async def download_media(
     try:
         tmp_path.rename(final_path)
         logger.info(f"保存成功: {final_path}")
-        return final_path
-    except Exception as e:
+    except OSError as e:
         logger.info(f"重命名失败: {e}")
         tmp_path.unlink(missing_ok=True)
         return None
+    else:
+        return final_path
+
 
 async def save_media(data: UniMessage) -> str:
     """
@@ -92,21 +101,20 @@ async def save_media(data: UniMessage) -> str:
     uni_data = UniMessage(data)
     # 使用UniMessage.dump()方法将UniMessage对象转换成JSON数组
     dumped_uni_data = uni_data.dump(json=True)
-    
+
     # 处理JSON数组，下载媒体文件并保存
     loadded_data = json.loads(dumped_uni_data)
     for item in loadded_data:
-        if 'url' in item:
+        if "url" in item:
             # 下载文件
-            file_path = await download_media(item['url'], media_save_dir)
-            item['id'] = file_path.name if file_path else item['id']
+            file_path = await download_media(item["url"], media_save_dir)
+            item["id"] = file_path.name if file_path else item["id"]
             # 标记为 media
-            item['media'] = True
+            item["media"] = True
             # 删除url字段
-            del item['url']
+            del item["url"]
 
-    dumped_data = json.dumps(loadded_data, ensure_ascii=False)
-    return dumped_data
+    return json.dumps(loadded_data, ensure_ascii=False)
 
 def load_media(data: str) -> UniMessage:
     """
@@ -118,9 +126,9 @@ def load_media(data: str) -> UniMessage:
 
     loadded_data = json.loads(data)
     for item in loadded_data:
-        if item.get('media'):
-            item['path'] = str(media_save_dir / item['id'])
-            del item['media']
+        if item.get("media"):
+            item["path"] = str(media_save_dir / item["id"])
+            del item["media"]
 
     dumped_data = json.dumps(loadded_data, ensure_ascii=False)
     return UniMessage.load(dumped_data)
@@ -133,15 +141,14 @@ async def convert_media(data: UniMessage) -> str:
     dumped_uni_data = uni_data.dump(json=True)
     loaded_data = json.loads(dumped_uni_data)
     for item in loaded_data:
-        if 'url' in item:
+        if "url" in item:
             # 构造文件路径，但不保存
-            file_path = await download_media(item['url'], media_save_dir, json=True)
-            item['id'] = file_path.name if file_path else item['id']
-            del item['url']
-            item['media'] = True
-    
-    dumped_data = json.dumps(loaded_data, ensure_ascii=False)
-    return dumped_data
+            file_path = await download_media(item["url"], media_save_dir, json=True)
+            item["id"] = file_path.name if file_path else item["id"]
+            del item["url"]
+            item["media"] = True
+
+    return json.dumps(loaded_data, ensure_ascii=False)
 
 def uni_message_to_dumpped_data(data: UniMessage) -> str:
     """
@@ -150,9 +157,8 @@ def uni_message_to_dumpped_data(data: UniMessage) -> str:
     dumped_uni_data = data.dump(json=True)
     loaded_data = json.loads(dumped_uni_data)
     for item in loaded_data:
-        if 'url' in item:
-            del item['url']
-            item['media'] = True
-    
-    dumped_data = json.dumps(loaded_data, ensure_ascii=False)
-    return dumped_data
+        if "url" in item:
+            del item["url"]
+            item["media"] = True
+
+    return json.dumps(loaded_data, ensure_ascii=False)
