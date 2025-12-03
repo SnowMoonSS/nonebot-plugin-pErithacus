@@ -1,18 +1,15 @@
 import json
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
 from apscheduler.triggers.cron import CronTrigger
+from nonebot.adapters import Bot, Event  # noqa: TC002
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, get_target
+from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .apscheduler import add_cron_job, remove_cron_job
 from .command import pe
 from .database import Index, add_content, create_content_list, get_entry
 from .lib import load_media, save_media
-
-if TYPE_CHECKING:
-    from nonebot.adapters import Bot, Event
-    from nonebot_plugin_orm import async_scoped_session
 
 
 @pe.assign("add")

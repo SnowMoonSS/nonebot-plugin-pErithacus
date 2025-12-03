@@ -1,16 +1,14 @@
 import random
-from typing import TYPE_CHECKING
 
+from nonebot.adapters import Event  # noqa: TC002
 from nonebot.log import logger
 from nonebot_plugin_alconna import UniMessage, UniMsg
+from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import on_every_message
 from .database import get_contents, get_entry
 from .lib import load_media, uni_message_to_dumpped_data
 
-if TYPE_CHECKING:
-    from nonebot.adapters import Event
-    from nonebot_plugin_orm import async_scoped_session
 
 @on_every_message.handle()
 async def _(

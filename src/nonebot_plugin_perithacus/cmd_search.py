@@ -1,9 +1,10 @@
 import json
-from typing import TYPE_CHECKING
 
 from nonebot import logger
+from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
+from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 from sqlalchemy import MetaData, Table, create_engine, select
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -11,9 +12,6 @@ from .command import pe
 from .database import get_entries, get_entry_by_id
 from .lib import convert_media, load_media
 
-if TYPE_CHECKING:
-    from nonebot.adapters import Event
-    from nonebot_plugin_orm import async_scoped_session
 
 @pe.assign("search")
 async def _(

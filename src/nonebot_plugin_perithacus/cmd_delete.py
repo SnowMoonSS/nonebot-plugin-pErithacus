@@ -1,15 +1,13 @@
 import json
-from typing import TYPE_CHECKING
 
+from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import get_entry
 from .lib import convert_media
 
-if TYPE_CHECKING:
-    from nonebot.adapters import Event
-    from nonebot_plugin_orm import async_scoped_session
 
 @pe.assign("del")
 async def _(

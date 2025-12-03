@@ -1,13 +1,10 @@
-from typing import TYPE_CHECKING
-
 from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
+from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import get_contents, get_entry_by_id
 from .lib import load_media
 
-if TYPE_CHECKING:
-    from nonebot_plugin_orm import async_scoped_session
 
 @pe.assign("detail")
 async def _(
