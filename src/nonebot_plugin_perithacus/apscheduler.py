@@ -54,7 +54,8 @@ async def load_cron_tasks() -> None:
     session = get_session()
     # 查询所有cron列有内容的行
     result = await session.execute(
-        select(Index).where(Index.cron.isnot(None))
+        select(Index)
+        .where(Index.cron.isnot(None))
     )
     entries = result.scalars().all()
 

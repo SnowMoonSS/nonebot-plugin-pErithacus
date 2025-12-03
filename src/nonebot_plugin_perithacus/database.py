@@ -100,8 +100,7 @@ class Index(Model):
 
 def create_content_list(table_name: str) -> None:
     """
-    在 content.db 中创建一个名为 table_name 的表，
-    结构为 id:int, content:text, timap:DateTime
+    在 content.db 中创建一个名为 table_name 的表
     """
     db_path = get_plugin_data_dir() / "content.db"
     engine = create_engine(f"sqlite:///{db_path}")
@@ -109,18 +108,40 @@ def create_content_list(table_name: str) -> None:
     table = Table(
         table_name,
         metadata,
-        Column("id", Integer, primary_key=True, autoincrement=True),
-        Column("content", Text, nullable=False),
-        Column("deleted", Boolean, default=False),
-        Column("date_modified", DateTime, default=datetime.now, onupdate=datetime.now),
-        Column("date_create", DateTime, default=datetime.now),
+        Column(
+            "id",
+            Integer,
+            primary_key=True,
+            autoincrement=True
+        ),
+        Column(
+            "content",
+            Text,
+            nullable=False
+        ),
+        Column(
+            "deleted",
+            Boolean,
+            default=False
+        ),
+        Column(
+            "date_modified",
+            DateTime(timezone=True),
+            default=lambda: datetime.now(UTC),
+            onupdate=lambda: datetime.now(UTC)
+        ),
+        Column(
+            "date_create",
+            DateTime(timezone=True),
+            default=lambda: datetime.now(UTC)
+        ),
     )
     metadata.create_all(engine, tables=[table])
     engine.dispose()
 
 async def get_contents(entry_id: int) -> Sequence[Row]:
     """
-    返回 table_name 表中的所有 content
+    返回 Entry_{entry_id} 表中的所有 content
     """
     table_name = f"Entry_{entry_id}"
     db_path = get_plugin_data_dir() / "content.db"
@@ -135,7 +156,7 @@ async def get_contents(entry_id: int) -> Sequence[Row]:
 
 async def get_all_contents(entry_id: int) -> Sequence[Row]:
     """
-    返回 table_name 表中的所有 content
+    返回 Entry_{entry_id} 表中的所有 content
     包含被标记为删除的 content
     """
     table_name = f"Entry_{entry_id}"
@@ -157,7 +178,7 @@ async def get_entry(
     scope_list : list[str],
 ) -> Index | None:
     """
-    返回在 scpoe_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条实体。
+    返回在 scpoe_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条。
     - keyword: 经由 save_media 或者 convert_media 转换后的 JSON 字符串
     - scope_list: 字符串列表
     """
@@ -234,7 +255,9 @@ async def get_entries(
     is_all : bool = False
 ) -> Sequence[Index] | None:
     """
-    返回在 scpoe_list 中且未被删除的词条实体。
+    返回在 scpoe_list 中且未被删除的词条。
+    - scope_list: 列表
+    - is_all: 是否返回所有条目，默认为 False
     """
     # 筛选未删除的条目
     result = await session.execute(
@@ -266,6 +289,9 @@ async def get_entry_by_id(
     session : async_scoped_session,
     entry_id : int
 ) -> Index | None:
+    """
+    返回 entry_id 对应的词条。
+    """
     return await session.get(Index, entry_id)
 
 def remove_sticker_info(content_str: str) -> str:
@@ -284,7 +310,7 @@ def remove_sticker_info(content_str: str) -> str:
 
 def compare_contents(content1: str, content2: str) -> bool:
     """
-    比较两个 content 是否相等。
+    比较两个 content 是否相同。
     """
     clean_content1 = remove_sticker_info(content1)
     clean_content2 = remove_sticker_info(content2)
@@ -312,7 +338,8 @@ async def restore_deleted_content(table_id: int, row_id: int) -> None:
 
 async def add_content(table_id: int, content: str) -> bool:
     """
-    向 table_name 表中添加一条 content 记录
+    向 table_name 表中添加一条 content 。
+    返回 True 表示添加成功，返回 False 表示添加失败。
     """
     table_name = f"Entry_{table_id}"
     # 提取所有的 content
@@ -349,6 +376,7 @@ async def add_content(table_id: int, content: str) -> bool:
 async def delete_content(table_id: int, content_id: int) -> bool:
     """
     将 table_id 表中的 content_id 记录标记为已删除
+    返回 True 删除成功，返回 False 删除失败
     """
     table_name = f"Entry_{table_id}"
 
@@ -381,6 +409,7 @@ async def replace_content(
 ) -> bool:
     """
     替换 table_id 表中的 id 记录的 content 为 new_content
+    返回 True 删除成功，返回 False 删除失败
     """
     table_name = f"Entry_{table_id}"
     # 提取所有的 content
