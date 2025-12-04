@@ -21,6 +21,7 @@ from . import database as database
 from . import lib as lib
 from . import trigger as trigger
 from .apscheduler import load_cron_tasks
+from .database import upgrade_content_db_1_to_2
 
 driver = get_driver()
 
@@ -36,7 +37,7 @@ __plugin_meta__ = PluginMetadata(
 )
 
 @driver.on_startup
-async def _perithacus_load_cron_tasks():
+async def _load_perithacus():
     try:
         await load_cron_tasks()
     except (OperationalError, ProgrammingError) as e:
@@ -45,3 +46,5 @@ async def _perithacus_load_cron_tasks():
         logger.exception("发现无效的 cron 表达式: %s", e)
     except RuntimeError as e:
         logger.exception("运行时错误（如调度器未初始化）: %s", e)
+
+    await upgrade_content_db_1_to_2()

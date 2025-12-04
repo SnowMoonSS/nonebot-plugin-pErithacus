@@ -156,7 +156,7 @@ async def _(
         session.add(new_entry)
         await session.commit()
         await session.refresh(new_entry)
-        create_content_list(f"Entry_{new_entry.id}")
+        await create_content_list(f"Entry_{new_entry.id}")
         await add_content(new_entry.id, content_text)
         if cron_expressions:
             add_cron_job(new_entry.id, cron_expressions)

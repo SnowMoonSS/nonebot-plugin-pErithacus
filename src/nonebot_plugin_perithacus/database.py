@@ -3,6 +3,8 @@ import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+import sqlalchemy as sa
+from alembic import op
 from nonebot import logger
 from nonebot_plugin_alconna import Text as AlconnaText
 from nonebot_plugin_alconna import UniMessage
@@ -98,7 +100,7 @@ class Index(Model):
         comment="词条创建时间戳"
     )
 
-def create_content_list(table_name: str) -> None:
+async def create_content_list(table_name: str) -> None:
     """
     在 content.db 中创建一个名为 table_name 的表
     """
@@ -117,26 +119,56 @@ def create_content_list(table_name: str) -> None:
         Column(
             "content",
             Text,
-            nullable=False
+            nullable=False,
         ),
         Column(
             "deleted",
             Boolean,
-            default=False
+            default=False,
         ),
         Column(
             "date_modified",
             DateTime(timezone=True),
             default=lambda: datetime.now(UTC),
-            onupdate=lambda: datetime.now(UTC)
+            onupdate=lambda: datetime.now(UTC),
+            comment="内容编辑时间戳"
         ),
         Column(
             "date_create",
             DateTime(timezone=True),
-            default=lambda: datetime.now(UTC)
+            default=lambda: datetime.now(UTC),
+            comment="内容创建时间戳"
         ),
     )
     metadata.create_all(engine, tables=[table])
+    metadata.reflect(bind=engine)
+    if "content_version" not in metadata.tables:
+        await create_version_table()
+    engine.dispose()
+
+async def create_version_table() -> None:
+    """
+    在 content.db 中创建一个记录数据库版本的表
+    """
+    version_num = 2
+
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    table = Table(
+        "content_version",
+        metadata,
+        Column(
+            "version_num",
+            Integer,
+            nullable=False
+        ),
+    )
+    metadata.create_all(engine, tables=[table])
+    with engine.connect() as conn:
+        update = table.insert().values(version_num={version_num})
+        conn.execute(update)
+        conn.commit()
     engine.dispose()
 
 async def get_contents(entry_id: int) -> Sequence[Row]:
@@ -428,7 +460,7 @@ async def replace_content(
             update_stmt = (
                 table.update()
                 .where(table.c.id == content_id)
-                .values(content=new_content, dete_modified=datetime.now(UTC))
+                .values(content=new_content, date_modified=datetime.now(UTC))
             )
             conn.execute(update_stmt)
             conn.commit()
@@ -440,3 +472,68 @@ async def replace_content(
         return True
     finally:
         engine.dispose()
+
+async def upgrade_content_db_1_to_2() -> None:
+    """
+    升级 content.db 数据库结构
+    """
+    db_path = get_plugin_data_dir() / "content.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+
+    with engine.connect() as conn:
+        transaction = conn.begin()
+        if "content_version" not in metadata.tables:
+            try:
+                for table_name in metadata.tables:
+                    if table_name.startswith("Entry_"):
+                        with op.batch_alter_table(table_name, schema=None) as batch_op:
+                            batch_op.add_column(
+                                sa.Column(
+                                    "date_modified",
+                                    sa.DateTime(timezone=True),
+                                    nullable=False,
+                                    default=lambda: datetime.now(UTC),
+                                    onupdate=lambda: datetime.now(UTC),
+                                    comment="内容编辑时间戳"
+                                )
+                            )
+                            batch_op.add_column(
+                                sa.Column(
+                                    "date_create",
+                                    sa.DateTime(timezone=True),
+                                    nullable=False,
+                                    default=lambda: datetime.now(UTC),
+                                    comment="内容创建时间戳"
+                                )
+                            )
+
+                        op.execute(f"""
+                            UPDATE {table_name} 
+                            SET 
+                                date_modified = strftime('%Y-%m-%d %H:%M:%f', 'now') || '+00:00',
+                                date_create = strftime('%Y-%m-%d %H:%M:%f', 'now') || '+00:00'
+                        """)
+
+                        with op.batch_alter_table(table_name, schema=None) as batch_op:
+                            batch_op.drop_column("dateModified")
+                            batch_op.drop_column("dateCreate")
+
+                    if table_name == "content_version":
+                            update = (
+                                sa.update(metadata.tables["content_version"])
+                                .values(version_num=2)
+                            )
+                            conn.execute(update)
+
+                transaction.commit()
+
+            except SQLAlchemyError as e:
+                logger.error(f"升级 content.db 失败：{e}")
+                transaction.rollback()
+                raise
+        else:
+            logger.info("content.db 已经是最新版本，无需升级")
+
+    engine.dispose()
