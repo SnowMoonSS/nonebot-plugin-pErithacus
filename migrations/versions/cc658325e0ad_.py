@@ -34,8 +34,8 @@ def upgrade(name: str = "") -> None:
         SET 
             match_method = matchMethod,
             is_random = isRandom,
-            date_modified = strftime('%Y-%m-%d %H:%M:%f', dateModified, '-8 hours') || '+00:00',
-            date_create = strftime('%Y-%m-%d %H:%M:%f', dateCreate, '-8 hours') || '+00:00'
+            date_modified = strftime('%Y-%m-%d %H:%M:%f', dateModified, '-8 hours'),
+            date_create = strftime('%Y-%m-%d %H:%M:%f', dateCreate, '-8 hours')'
     """)
 
     with op.batch_alter_table('nonebot_plugin_perithacus_index', schema=None) as batch_op:
