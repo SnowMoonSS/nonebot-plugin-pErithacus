@@ -485,7 +485,7 @@ async def upgrade_content_db_1_to_2() -> None:
 
         # 检查是否存在content_version表
         if "content_version" in metadata.tables:
-            logger.info("数据库已经是最新版本，无需升级")
+            logger.info("content.db 已经是最新版本，无需升级")
             engine.dispose()
             return
 
