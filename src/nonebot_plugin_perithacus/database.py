@@ -164,7 +164,7 @@ async def create_version_table() -> None:
     )
     metadata.create_all(engine, tables=[table])
     with engine.connect() as conn:
-        update = table.insert().values(version_num={version_num})
+        update = table.insert().values(version_num=version_num)
         conn.execute(update)
         conn.commit()
     engine.dispose()
@@ -573,6 +573,7 @@ async def upgrade_content_db_1_to_2() -> None:
                             date_create = date_create.replace(tzinfo=beijing_tz)
                             # 转换为 UTC
                             date_create = date_create.astimezone(UTC)
+
                         # 插入到新表
                         insert_stmt = new_table.insert().values(
                             id=row.id,
@@ -587,7 +588,10 @@ async def upgrade_content_db_1_to_2() -> None:
 
                 # 删除旧表，重命名新表
                 with engine.connect() as conn:
-                    old_table.drop(bind=engine, checkfirst=False)
+                    drop_stmt = sa.text(f"DROP TABLE {table_name}")
+                    conn.execute(drop_stmt)
+                    conn.commit()
+
                     rename_stmt = sa.text(
                         f"ALTER TABLE new_{table_name} RENAME TO {table_name}"
                     )
