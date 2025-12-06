@@ -1,8 +1,8 @@
 import json
 import re
-from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from datetime import timezone as tz
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from nonebot import logger
@@ -22,11 +22,15 @@ from sqlalchemy import (
     create_engine,
     select,
 )
-from sqlalchemy.engine import Row
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .lib import load_media
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sqlalchemy.engine import Row
 
 
 class Index(Model):
