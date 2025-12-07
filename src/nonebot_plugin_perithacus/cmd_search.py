@@ -93,6 +93,8 @@ async def _(
             # 遍历所有表
             try:
                 for table_name in metadata.tables:
+                    if table_name == "content_version":
+                        continue
                     # 获取表对象
                     table = Table(table_name, metadata, autoload_with=engine)
                     try:
