@@ -66,7 +66,7 @@ async def _(
     if not key:
         key = UniMessage(keyword.result).extract_plain_text()
 
-    if is_all.available and is_all.result:
+    if is_all.result:
         entries = await get_entries(session, scope_list, is_all=True)
     else:
         entries = await get_entries(session, scope_list)

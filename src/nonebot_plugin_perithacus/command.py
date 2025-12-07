@@ -44,11 +44,7 @@ perithacus = Alconna(
             Arg("page?#页码", int, notice="列出指定页的搜索结果"),
         ),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
-        Option(
-            "-a|--all",
-            Args["is_all#是否列出所有作用域的搜索结果", bool],
-            default=False
-        ),
+        Option("-a|--all"),
         help_text="搜索词条",
     ),
     Subcommand(
@@ -79,7 +75,7 @@ perithacus = Alconna(
         ),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域群号", str], default=""),
-        Option("-re|--regex", Args["reg#正则匹配的正则表达式", str], default=""),
+        Option("-R|--regex", Args["reg#正则匹配的正则表达式", str], default=""),
         Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
         Option("-d|--delete", Args["delete_id#删除指定id的回复", int], default=0),
         Option(

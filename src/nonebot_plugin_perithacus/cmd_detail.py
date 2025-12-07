@@ -1,3 +1,5 @@
+from datetime import timedelta, timezone
+
 from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
@@ -16,7 +18,7 @@ async def _(
 ):
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
-        if force.available or not entry.deleted:
+        if force.result or not entry.deleted:
             rows = await get_contents(entry_id.result)
 
             # 分页处理
@@ -41,17 +43,19 @@ async def _(
             )
 
             # 显示当前页的内容
+            beijing_tz = timezone(timedelta(hours=8))
             for i in range(start_index, end_index):
                 row = rows[i]
+                date_modified = row.date_modified.astimezone(beijing_tz)
                 msg.extend(
                     f"{row.id}　" +
                     load_media(row.content) +
-                    f"　时间: {row.date_modified}\n"
+                    f"　时间: {date_modified}\n"
                 )
 
             await pe.finish(msg)
 
-        elif not force.available and entry.deleted:
+        elif not force.result and entry.deleted:
             await pe.finish(
                 "请输入有效的词条 ID 。使用 search 或 list 命令查看词条列表。"
             )

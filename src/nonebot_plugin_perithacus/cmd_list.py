@@ -41,7 +41,7 @@ async def _(
             if not s.startswith(("g", "u")):
                 await pe.finish("scope参数必须以g或u开头")
 
-    if is_all.available and is_all.result:
+    if is_all.result:
         entries = await get_entries(session, scope_list, is_all=True)
     else:
         entries = await get_entries(session, scope_list)

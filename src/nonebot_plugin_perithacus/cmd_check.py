@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta, timezone
 
 from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
@@ -19,8 +20,12 @@ async def _(
 
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
-        if force.available or not entry.deleted:
+        if force.result or not entry.deleted:
             keyword = load_media(entry.keyword)
+            # 将UTC时间转换为北京时间
+            beijing_tz = timezone(timedelta(hours=8))
+            date_create = entry.date_create.astimezone(beijing_tz)
+            date_modified = entry.date_modified.astimezone(beijing_tz)
 
             aliases = UniMessage()
             if entry.alias:
@@ -37,8 +42,8 @@ async def _(
                                 f"正则表达式：{entry.reg}\n" +
                                 f"来源：{entry.source}\n" +
                                 f"删除：{entry.deleted}\n" +
-                                f"创建时间：{entry.date_create}\n" +
-                                f"修改时间：{entry.date_modified}\n" +
+                                f"创建时间：{date_create}\n" +
+                                f"修改时间：{date_modified}\n" +
                                  "别名：" + aliases
                                 )
             else:
@@ -52,11 +57,11 @@ async def _(
                                 f"正则表达式：{entry.reg}\n" +
                                 f"来源：{entry.source}\n" +
                                 f"删除：{entry.deleted}\n" +
-                                f"创建时间：{entry.date_create}\n" +
-                                f"修改时间：{entry.date_modified}\n" +
+                                f"创建时间：{date_create}\n" +
+                                f"修改时间：{date_modified}\n" +
                                 f"别名：{aliases}"
                                 )
-        elif not force.available and entry.deleted:
+        elif not force.result and entry.deleted:
             await pe.finish(
                 "请输入有效的词条 ID 。使用 search 或 list 命令查看词条列表。"
                 )
