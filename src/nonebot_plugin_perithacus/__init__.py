@@ -25,7 +25,7 @@ from .database import upgrade_content_db_1_to_2
 
 driver = get_driver()
 
-__version__ = "1.1.4"
+__version__ = "1.1.5"
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
     description=("pErithacus 是一个基于 NoneBot2 框架的聊天插件，"
