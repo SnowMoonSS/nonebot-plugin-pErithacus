@@ -9,7 +9,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .apscheduler import add_cron_job, remove_cron_job
 from .command import pe
-from .database import delete_content, get_entry, replace_content
+from .database import add_content, delete_content, get_entry
 from .lib import convert_media, save_media
 
 
@@ -32,6 +32,18 @@ async def _(
     """
     修改词条
     """
+
+    if not (
+        match_method.available
+        or is_random.available
+        or cron.available
+        or scope.available
+        or reg.available
+        or alias.available
+        or delete_id.available
+        or replace_id.available
+    ):
+        await pe.finish("未提供修改项")
 
     # 处理keyword
     keyword_text = await convert_media(keyword.result)
@@ -141,12 +153,13 @@ async def _(
                 msg.append("\n删除内容失败，请检查内容编号是否正确")
 
         if replace_id.available and content.available:
-            # 替换指定的内容
+            # 将被替换的内容标记为已删除
+            delete = await delete_content(existing_entry.id, replace_id.result)
+
+            # 添加新的内容
             content_text = await save_media(content.result)
-            result = await replace_content(
-                existing_entry.id, replace_id.result, content_text
-                )
-            if result:
+            add = await add_content(existing_entry.id, content_text)
+            if delete and add:
                 msg.append("\n替换内容成功！")
             else:
                 msg.append("\n替换内容失败，请检查内容编号是否正确")
