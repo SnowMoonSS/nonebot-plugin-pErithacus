@@ -1,5 +1,13 @@
+from arclet.alconna import Arparma
+from loguru import logger
 from nonebot.adapters import Event  # noqa: TC002
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_alconna import (
+    AlconnaMatch,
+    AlconnaQuery,
+    Match,
+    Query,
+    UniMessage,
+)
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
@@ -13,12 +21,16 @@ async def _(
 
     page: Match[int] = AlconnaMatch("page"),
     scope: Match[str] = AlconnaMatch("scope"),
-    is_all: Match[bool] = AlconnaMatch("is_all"),
+    is_all: Query = AlconnaQuery("list.is_all", default=False)
 ):
     """
     列出所有词条。
     - page <int>: 页码，可选参数。列出指定页的词条内容。默认为第一页。
+    - scope <str>: 作用域，可选参数。指定作用域以列出该作用域下的词条。
+    - is_all <bool>: 可选参数。是否忽略scope参数列出所有词条，可选参数。默认为False。
     """
+
+    logger.debug(f"is_all: {is_all.result}")
 
     # 处理source
     session_id = event.get_session_id()
@@ -41,7 +53,7 @@ async def _(
             if not s.startswith(("g", "u")):
                 await pe.finish("scope参数必须以g或u开头")
 
-    if is_all.result:
+    if is_all.result.value:
         entries = await get_entries(session, scope_list, is_all=True)
     else:
         entries = await get_entries(session, scope_list)

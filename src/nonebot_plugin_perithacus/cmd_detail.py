@@ -14,11 +14,11 @@ async def _(
 
     entry_id: Match[int] = AlconnaMatch("id"),
     page: Match[int] = AlconnaMatch("page"),
-    force: Query[bool] = AlconnaQuery("force", default=False),
+    force: Query = AlconnaQuery("force", default=False),
 ):
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
-        if force.result or not entry.deleted:
+        if force.result.value or not entry.deleted:
             rows = await get_contents(entry_id.result)
 
             # 分页处理
@@ -56,7 +56,7 @@ async def _(
 
             await pe.finish(msg)
 
-        elif not force.result and entry.deleted:
+        elif not force.result.value and entry.deleted:
             await pe.finish(
                 "请输入有效的词条 ID 。使用 search 或 list 命令查看词条列表。"
             )

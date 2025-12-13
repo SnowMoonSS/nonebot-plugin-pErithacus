@@ -14,13 +14,13 @@ async def _(
     session : async_scoped_session,
 
     entry_id: Match[int] = AlconnaMatch("id"),
-    force: Query[bool] = AlconnaQuery("force", default=False),
+    force: Query = AlconnaQuery("force", default=False),
 ):
     """查看词条配置"""
 
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
-        if force.result or not entry.deleted:
+        if force.result.value or not entry.deleted:
             keyword = load_media(entry.keyword)
             # 将UTC时间转换为北京时间
             beijing_tz = timezone(timedelta(hours=8))
@@ -63,7 +63,7 @@ async def _(
                                 f"修改时间：{date_modified}\n" +
                                 f"别名：{aliases}"
                                 )
-        elif not force.result and entry.deleted:
+        elif not force.result.value and entry.deleted:
             await pe.finish(
                 "请输入有效的词条 ID 。使用 search 或 list 命令查看词条列表。"
                 )

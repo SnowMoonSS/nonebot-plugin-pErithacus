@@ -2,7 +2,7 @@ import json
 
 from nonebot import logger
 from nonebot.adapters import Event  # noqa: TC002
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 from sqlalchemy import MetaData, Table, create_engine, select
@@ -21,13 +21,16 @@ async def _(
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     page: Match[int] = AlconnaMatch("page"),
     scope: Match[str] = AlconnaMatch("scope"),
-    is_all: Match[bool] = AlconnaMatch("is_all"),
+    is_all: Query = AlconnaQuery("search.is_all", default=False)
 ):
     """
     搜索词条。
     - keyword <str>: 关键词。
     - page <int>: 页码，可选参数。列出指定页的词条内容。默认为第一页。
     """
+
+    logger.debug(f"is_all: {is_all.result}")
+
     # 处理source
     session_id = event.get_session_id()
     # 根据 session_id 格式设置 source 变量
@@ -66,7 +69,7 @@ async def _(
     if not key:
         key = UniMessage(keyword.result).extract_plain_text()
 
-    if is_all.result:
+    if is_all.result.value:
         entries = await get_entries(session, scope_list, is_all=True)
     else:
         entries = await get_entries(session, scope_list)
