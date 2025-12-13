@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import UTC, timedelta, timezone
 
 from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
@@ -46,7 +46,8 @@ async def _(
             beijing_tz = timezone(timedelta(hours=8))
             for i in range(start_index, end_index):
                 row = rows[i]
-                date_modified = row.date_modified.astimezone(beijing_tz)
+                date_modified = row.date_modified.replace(tzinfo=UTC)
+                date_modified = date_modified.astimezone(beijing_tz)
                 msg.extend(
                     f"{row.id}　" +
                     load_media(row.content) +

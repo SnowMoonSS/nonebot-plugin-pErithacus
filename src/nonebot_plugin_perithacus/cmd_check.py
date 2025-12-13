@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta, timezone
+from datetime import UTC, timedelta, timezone
 
 from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
@@ -24,7 +24,9 @@ async def _(
             keyword = load_media(entry.keyword)
             # 将UTC时间转换为北京时间
             beijing_tz = timezone(timedelta(hours=8))
+            date_create = entry.date_create.replace(tzinfo=UTC)
             date_create = entry.date_create.astimezone(beijing_tz)
+            date_modified = entry.date_modified.replace(tzinfo=UTC)
             date_modified = entry.date_modified.astimezone(beijing_tz)
 
             aliases = UniMessage()
