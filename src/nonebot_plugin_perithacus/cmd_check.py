@@ -14,7 +14,7 @@ async def _(
     session : async_scoped_session,
 
     entry_id: Match[int] = AlconnaMatch("id"),
-    force: Query = AlconnaQuery("force", default=False),
+    force: Query = AlconnaQuery("check.force", default=False),
 ):
     """查看词条配置"""
 

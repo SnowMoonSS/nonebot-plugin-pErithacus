@@ -1,4 +1,3 @@
-from arclet.alconna import Arparma
 from loguru import logger
 from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import (

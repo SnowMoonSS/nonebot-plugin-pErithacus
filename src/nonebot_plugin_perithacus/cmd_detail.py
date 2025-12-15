@@ -14,7 +14,7 @@ async def _(
 
     entry_id: Match[int] = AlconnaMatch("id"),
     page: Match[int] = AlconnaMatch("page"),
-    force: Query = AlconnaQuery("force", default=False),
+    force: Query = AlconnaQuery("detail.force", default=False),
 ):
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
