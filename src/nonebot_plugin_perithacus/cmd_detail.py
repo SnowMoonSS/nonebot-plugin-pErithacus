@@ -4,7 +4,7 @@ from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, Uni
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
-from .database import get_contents, get_entry_by_id
+from .database import get_all_contents, get_contents, get_entry_by_id
 from .lib import load_media
 
 
@@ -15,11 +15,15 @@ async def _(
     entry_id: Match[int] = AlconnaMatch("id"),
     page: Match[int] = AlconnaMatch("page"),
     force: Query = AlconnaQuery("detail.force", default=False),
+    is_all: Query = AlconnaQuery("detail.is_all", default=False)
 ):
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
         if force.result.value or not entry.deleted:
-            rows = await get_contents(entry_id.result)
+            if is_all.result.value:
+                rows = await get_all_contents(entry_id.result)
+            else:
+                rows = await get_contents(entry_id.result)
 
             # 分页处理
             page_size = 5
