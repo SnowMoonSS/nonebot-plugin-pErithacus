@@ -24,7 +24,7 @@ async def execute_cron_task(
     logger.debug(f"执行定时任务，词条ID: {entry_id}")
 
     session = get_session()
-    existing_entry = await session.get(Index, id)
+    existing_entry = await session.get(Index, entry_id)
     contents = await get_contents(entry_id)
     if existing_entry:
         if existing_entry.is_random:
