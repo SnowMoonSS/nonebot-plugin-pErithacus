@@ -31,7 +31,7 @@ async def execute_cron_task(
             content = random.choice(contents)
             logger.debug(f"随机选择内容 ID {content.id} 进行发送")
         else:
-            content = max(contents, key=lambda x: x.timap)
+            content = max(contents, key=lambda x: x.date_modified)
             logger.debug(f"选择最新内容 ID {content.id} 进行发送")
         for scope in json.loads(existing_entry.scope):
             target = Target.load(json.loads(existing_entry.target))

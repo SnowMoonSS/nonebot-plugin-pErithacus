@@ -4,6 +4,7 @@ from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
+from .apscheduler import remove_cron_job
 from .command import pe
 from .database import get_entry
 from .lib import convert_media
@@ -72,6 +73,7 @@ async def _(
                 session.add(entry)
                 await session.commit()
                 await session.refresh(entry)
+                remove_cron_job(entry.id)
                 await pe.finish(
                     "已从词条 " + uni_keyword + f" 中移除作用域 {scope_list}，"
                     "词条已标记为删除"
