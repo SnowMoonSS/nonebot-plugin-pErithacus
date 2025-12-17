@@ -7,7 +7,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import on_every_message
 from .database import get_contents, get_entry
-from .lib import build_source, load_media, uni_message_to_dumpped_data
+from .lib import get_source, load_media, uni_message_to_dumpped_data
 
 
 @on_every_message.handle()
@@ -18,7 +18,7 @@ async def _(
 ):
     msg_text = uni_message_to_dumpped_data(msg)
 
-    this_source = build_source(event)
+    this_source = get_source(event)
     scope_list = [this_source]
 
     existing_entry = await get_entry(session, msg_text, scope_list)

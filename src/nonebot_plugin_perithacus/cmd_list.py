@@ -11,7 +11,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import get_entries
-from .lib import build_source
+from .lib import get_source
 
 
 @pe.assign("list")
@@ -32,7 +32,7 @@ async def _(
 
     logger.debug(f"is_all: {is_all.result}")
 
-    this_source = build_source(event)
+    this_source = get_source(event)
 
     # 处理scope
     if not scope.available:

@@ -6,9 +6,10 @@ from pathlib import Path
 
 import filetype
 import httpx
+from apscheduler.triggers.cron import CronTrigger
 from nonebot import logger
-from nonebot.adapters import Bot, Event
-from nonebot_plugin_alconna import UniMessage
+from nonebot.adapters import Bot, Event  # noqa: TC002
+from nonebot_plugin_alconna import Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 media_save_dir = get_plugin_data_dir() / "media"
@@ -164,8 +165,10 @@ def uni_message_to_dumpped_data(data: UniMessage) -> str:
 
     return json.dumps(loaded_data, ensure_ascii=False)
 
-def build_source(event: Event) -> str:
-    # 处理source
+def get_source(event: Event) -> str:
+    """
+    获取消息来源
+    """
     session_id = event.get_session_id()
     # 根据 session_id 格式设置 source 变量
     if session_id.startswith("group_"):
@@ -178,3 +181,23 @@ def build_source(event: Event) -> str:
         this_source = f"u{user_id}"
 
     return this_source
+
+def get_cron(cron: Match) -> None | str:
+    """
+    验证 cron 表达式的基本格式，
+    当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
+    """
+
+    if cron.available:
+        if cron.result != "None":
+            cron_expressions = cron.result.replace("#", " ")
+            try:
+                CronTrigger.from_crontab(cron_expressions)
+            except ValueError as e:
+                logger.error(f"cron参数格式错误: {e}")
+        else:
+            cron_expressions = None
+    else:
+        cron_expressions = None
+
+    return cron_expressions

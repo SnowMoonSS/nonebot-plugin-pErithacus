@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .command import pe
 from .database import get_entries, get_entry_by_id
-from .lib import build_source, convert_media, load_media
+from .lib import convert_media, get_source, load_media
 
 
 @pe.assign("search")
@@ -31,7 +31,7 @@ async def _(
 
     logger.debug(f"is_all: {is_all.result}")
 
-    this_source = build_source(event)
+    this_source = get_source(event)
 
     # 处理scope
     if not scope.available:

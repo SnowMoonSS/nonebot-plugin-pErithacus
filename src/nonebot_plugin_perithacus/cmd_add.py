@@ -9,7 +9,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 from .apscheduler import add_cron_job, remove_cron_job
 from .command import pe
 from .database import Index, add_content, create_content_list, get_entry
-from .lib import build_source, load_media, save_media
+from .lib import get_cron, get_source, load_media, save_media
 
 
 @pe.assign("add")
@@ -34,21 +34,8 @@ async def _(
 
     keyword_text = await save_media(keyword.result)
     content_text = await save_media(content.result)
-    this_source = build_source(event)
-
-    # 验证 cron 表达式的基本格式，
-    # 当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
-    if cron.available:
-        if cron.result != "None":
-            cron_expressions = cron.result.replace("#", " ")
-            try:
-                CronTrigger.from_crontab(cron_expressions)
-            except ValueError:
-                await pe.finish("cron参数格式错误")
-        else:
-            cron_expressions = None
-    else:
-        cron_expressions = None
+    this_source = get_source(event)
+    cron_expressions = get_cron(cron)
 
     # 处理scope
     if not scope.available:

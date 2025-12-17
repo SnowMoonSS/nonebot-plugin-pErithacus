@@ -7,7 +7,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 from .apscheduler import remove_cron_job
 from .command import pe
 from .database import get_entry
-from .lib import build_source, convert_media
+from .lib import convert_media, get_source
 
 
 @pe.assign("del")
@@ -25,7 +25,7 @@ async def _(
 
     keyword_text = await convert_media(keyword.result)
     uni_keyword = UniMessage(keyword.result)
-    this_source = build_source(event)
+    this_source = get_source(event)
 
     # 处理scope
     if not scope.available:
