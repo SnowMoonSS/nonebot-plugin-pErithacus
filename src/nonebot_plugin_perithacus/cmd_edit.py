@@ -10,7 +10,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 from .apscheduler import add_cron_job, remove_cron_job
 from .command import pe
 from .database import add_content, delete_content, get_entry
-from .lib import convert_media, save_media
+from .lib import build_source, convert_media, save_media
 
 
 @pe.assign("edit")
@@ -45,20 +45,8 @@ async def _(
     ):
         await pe.finish("未提供修改项")
 
-    # 处理keyword
     keyword_text = await convert_media(keyword.result)
-
-    # 处理source
-    session_id = event.get_session_id()
-    # 根据 session_id 格式设置 source 变量
-    if session_id.startswith("group_"):
-        # group_{groupid}_{userid} 格式，提取 groupid
-        group_id = session_id.split("_")[1]
-        this_source = f"g{group_id}"
-    else:
-        # {userid} 格式，直接使用 userid
-        user_id = session_id
-        this_source = f"u{user_id}"
+    this_source = build_source(event)
 
     # 验证 cron 表达式的基本格式，
     # 当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None

@@ -11,6 +11,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import get_entries
+from .lib import build_source
 
 
 @pe.assign("list")
@@ -31,17 +32,7 @@ async def _(
 
     logger.debug(f"is_all: {is_all.result}")
 
-    # 处理source
-    session_id = event.get_session_id()
-    # 根据 session_id 格式设置 source 变量
-    if session_id.startswith("group_"):
-        # group_{groupid}_{userid} 格式，提取 groupid
-        group_id = session_id.split("_")[1]
-        this_source = f"g{group_id}"
-    else:
-        # {userid} 格式，直接使用 userid
-        user_id = session_id
-        this_source = f"u{user_id}"
+    this_source = build_source(event)
 
     # 处理scope
     if not scope.available:

@@ -7,7 +7,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import on_every_message
 from .database import get_contents, get_entry
-from .lib import load_media, uni_message_to_dumpped_data
+from .lib import build_source, load_media, uni_message_to_dumpped_data
 
 
 @on_every_message.handle()
@@ -18,17 +18,7 @@ async def _(
 ):
     msg_text = uni_message_to_dumpped_data(msg)
 
-    # 处理source
-    session_id = event.get_session_id()
-    # 根据 session_id 格式设置 source 变量
-    if session_id.startswith("group_"):
-        # group_{groupid}_{userid} 格式，提取 groupid
-        group_id = session_id.split("_")[1]
-        this_source = f"g{group_id}"
-    else:
-        # {userid} 格式，直接使用 userid
-        user_id = session_id
-        this_source = f"u{user_id}"
+    this_source = build_source(event)
     scope_list = [this_source]
 
     existing_entry = await get_entry(session, msg_text, scope_list)

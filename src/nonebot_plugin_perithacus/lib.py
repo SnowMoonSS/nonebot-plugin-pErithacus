@@ -7,6 +7,7 @@ from pathlib import Path
 import filetype
 import httpx
 from nonebot import logger
+from nonebot.adapters import Bot, Event
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
@@ -162,3 +163,18 @@ def uni_message_to_dumpped_data(data: UniMessage) -> str:
             item["media"] = True
 
     return json.dumps(loaded_data, ensure_ascii=False)
+
+def build_source(event: Event) -> str:
+    # 处理source
+    session_id = event.get_session_id()
+    # 根据 session_id 格式设置 source 变量
+    if session_id.startswith("group_"):
+        # group_{groupid}_{userid} 格式，提取 groupid
+        group_id = session_id.split("_")[1]
+        this_source = f"g{group_id}"
+    else:
+        # {userid} 格式，直接使用 userid
+        user_id = session_id
+        this_source = f"u{user_id}"
+
+    return this_source
