@@ -228,7 +228,7 @@ async def get_entry(
         try:
             scope_list_from_db = json.loads(entry.scope) if entry.scope else []
             if not any(item in scope_list_from_db for item in scope_list):
-                logger.debug(f"跳过词条 {entry.id}，不在作用域 {scope_list} 中")
+                #logger.debug(f"跳过词条 {entry.id}，不在作用域 {scope_list} 中")
                 continue
         except json.JSONDecodeError:
             continue
@@ -263,8 +263,8 @@ async def get_entry(
             matches.append(entry)
             logger.debug(f"匹配词条 {entry.id}，别名匹配 {entry.alias}")
             continue
-        else:
-            logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
+        #else:
+            #logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
 
     if not matches:
         return None
