@@ -10,7 +10,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 from .apscheduler import add_cron_job, remove_cron_job
 from .command import pe
 from .database import add_content, delete_content, get_entry
-from .lib import convert_media, get_cron, get_source, save_media
+from .lib import convert_media, get_cron, get_scope, get_source, save_media
 
 
 @pe.assign("edit")
@@ -47,16 +47,14 @@ async def _(
 
     keyword_text = await convert_media(keyword.result)
     this_source = get_source(event)
-    cron_expressions = get_cron(cron)
-
-    # 处理scope
-    if not scope.available:
-        scope_list = [this_source]
-    else:
-        scope_list = scope.result.split(",")
-        for s in scope_list:
-            if not s.startswith(("g", "u")):
-                await pe.finish("scope参数必须以g或u开头")
+    try:
+        cron_expressions = get_cron(cron)
+    except ValueError:
+        await pe.finish("cron参数格式错误")
+    try:
+        scope_list = get_scope(scope, this_source)
+    except ValueError as e:
+        await pe.finish(str(e))
 
     # 处理alias
     alias_text = convert_media(alias.result)

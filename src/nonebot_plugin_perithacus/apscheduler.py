@@ -56,6 +56,7 @@ async def load_cron_tasks() -> None:
     result = await session.execute(
         select(Index)
         .where(Index.cron.isnot(None))
+        .where(~Index.deleted)
     )
     entries = result.scalars().all()
 

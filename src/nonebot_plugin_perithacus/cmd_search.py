@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .command import pe
 from .database import get_entries, get_entry_by_id
-from .lib import convert_media, get_source, load_media
+from .lib import convert_media, get_scope, get_source, load_media
 
 
 @pe.assign("search")
@@ -32,15 +32,10 @@ async def _(
     logger.debug(f"is_all: {is_all.result}")
 
     this_source = get_source(event)
-
-    # 处理scope
-    if not scope.available:
-        scope_list = [this_source]
-    else:
-        scope_list = scope.result.split(",")
-        for s in scope_list:
-            if not s.startswith(("g", "u")):
-                await pe.finish("scope参数必须以g或u开头")
+    try:
+        scope_list = get_scope(scope, this_source)
+    except ValueError as e:
+        await pe.finish(str(e))
 
     keyword_text = await convert_media(keyword.result)
     pe_message_list = json.loads(keyword_text)

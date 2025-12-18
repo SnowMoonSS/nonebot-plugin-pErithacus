@@ -195,9 +195,24 @@ def get_cron(cron: Match) -> None | str:
                 CronTrigger.from_crontab(cron_expressions)
             except ValueError as e:
                 logger.error(f"cron参数格式错误: {e}")
+                raise
         else:
             cron_expressions = None
     else:
         cron_expressions = None
 
     return cron_expressions
+
+def get_scope(scope: Match, this_source: str) -> list[str]:
+    """
+    获取作用域列表
+    """
+    if not scope.available:
+        return [this_source]
+
+    scope_list = scope.result.split(",")
+    for s in scope_list:
+        if not s.startswith(("g", "u")):
+            raise ValueError("scope参数必须以g或u开头")
+
+    return scope_list
