@@ -8,7 +8,7 @@ import filetype
 import httpx
 from apscheduler.triggers.cron import CronTrigger
 from nonebot import logger
-from nonebot.adapters import Bot, Event  # noqa: TC002
+from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
