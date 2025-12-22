@@ -101,6 +101,129 @@ class Index(Model):
         comment="词条创建时间戳"
     )
 
+async def get_entry(
+    session : async_scoped_session,
+
+    keyword : str,
+    scope_list : list[str],
+) -> Index | None:
+    """
+    返回在 scpoe_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条。
+    - keyword: 经由 save_media 或者 convert_media 转换后的 JSON 字符串
+    - scope_list: 字符串列表
+    """
+    # 筛选未删除的条目
+    result = await session.execute(
+        select(Index).where(~Index.deleted)
+    )
+    # 获取所有未删除的条目
+    entries = result.scalars().all()
+
+    # 进行匹配
+    matches = []
+    for entry in entries:
+        # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
+        try:
+            scope_list_from_db = json.loads(entry.scope) if entry.scope else []
+            if not any(item in scope_list_from_db for item in scope_list):
+                #logger.debug(f"跳过词条 {entry.id}，不在作用域 {scope_list} 中")
+                continue
+        except json.JSONDecodeError:
+            continue
+
+        # 直接匹配 keyword
+        if entry.keyword == keyword and entry.match_method == "精准":
+            matches.append(entry)
+            logger.debug(f"匹配词条 {entry.id}, 精准匹配")
+            continue
+        # 模糊匹配 keyword
+        keyword_msg = load_media(keyword)
+        if (
+            entry.match_method == "模糊"
+            and UniMessage(keyword_msg).only(AlconnaText)
+            and entry.reg is None
+        ):
+            key = keyword_msg.extract_plain_text()
+            entry_key = load_media(entry.keyword).extract_plain_text()
+            if key in entry_key:
+                matches.append(entry)
+                logger.debug(f"匹配词条 {entry.id}，模糊匹配")
+                continue
+        # 检查正则表达式
+        elif entry.reg and UniMessage(keyword_msg).only(AlconnaText):
+            key = keyword_msg.extract_plain_text()
+            if re.match(entry.reg, key):
+                matches.append(entry)
+                logger.debug(f"匹配词条 {entry.id}，正则匹配 {entry.reg}")
+                continue
+        # 检查 alias（JSON）
+        elif entry.alias and keyword in json.loads(entry.alias):
+            matches.append(entry)
+            logger.debug(f"匹配词条 {entry.id}，别名匹配 {entry.alias}")
+            continue
+        #else:
+            #logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
+
+    if not matches:
+        return None
+
+    if len(matches) == 1:
+        return matches[0]
+
+    # 多条时按 date_modified 最新的返回
+    min_datetime = datetime.min.replace(tzinfo=UTC)
+    def _get_sort_key(entry: Index):
+        return entry.date_modified or entry.date_create or min_datetime
+
+    return max(matches, key=_get_sort_key)
+
+async def get_entries(
+    session : async_scoped_session,
+
+    scope_list : list[str],
+    *,
+    is_all : bool = False
+) -> Sequence[Index] | None:
+    """
+    返回在 scpoe_list 中且未被删除的词条。
+    - scope_list: 列表
+    - is_all: 是否返回所有条目，默认为 False
+    """
+    # 筛选未删除的条目
+    result = await session.execute(
+        select(Index).where(~Index.deleted)
+    )
+    # 获取所有未删除的条目
+    entries = result.scalars().all()
+
+    if is_all:
+        return entries
+
+    matches = []
+    for entry in entries:
+        # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
+        try:
+            scope_list_from_db = json.loads(entry.scope) if entry.scope else []
+            if not any(item in scope_list_from_db for item in scope_list):
+                continue
+        except json.JSONDecodeError:
+            continue
+        matches.append(entry)
+
+    if not matches:
+        return None
+
+    return matches
+
+async def get_entry_by_id(
+    session : async_scoped_session,
+    entry_id : int
+) -> Index | None:
+    """
+    返回 entry_id 对应的词条。
+    """
+    return await session.get(Index, entry_id)
+
 class Content(Model):
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -234,129 +357,6 @@ async def get_all_contents(
     )
 
     return result.scalars().all()
-
-async def get_entry(
-    session : async_scoped_session,
-
-    keyword : str,
-    scope_list : list[str],
-) -> Index | None:
-    """
-    返回在 scpoe_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条。
-    - keyword: 经由 save_media 或者 convert_media 转换后的 JSON 字符串
-    - scope_list: 字符串列表
-    """
-    # 筛选未删除的条目
-    result = await session.execute(
-        select(Index).where(~Index.deleted)
-    )
-    # 获取所有未删除的条目
-    entries = result.scalars().all()
-
-    # 进行匹配
-    matches = []
-    for entry in entries:
-        # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
-        try:
-            scope_list_from_db = json.loads(entry.scope) if entry.scope else []
-            if not any(item in scope_list_from_db for item in scope_list):
-                #logger.debug(f"跳过词条 {entry.id}，不在作用域 {scope_list} 中")
-                continue
-        except json.JSONDecodeError:
-            continue
-
-        # 直接匹配 keyword
-        if entry.keyword == keyword and entry.match_method == "精准":
-            matches.append(entry)
-            logger.debug(f"匹配词条 {entry.id}, 精准匹配")
-            continue
-        # 模糊匹配 keyword
-        keyword_msg = load_media(keyword)
-        if (
-            entry.match_method == "模糊"
-            and UniMessage(keyword_msg).only(AlconnaText)
-            and entry.reg is None
-        ):
-            key = keyword_msg.extract_plain_text()
-            entry_key = load_media(entry.keyword).extract_plain_text()
-            if key in entry_key:
-                matches.append(entry)
-                logger.debug(f"匹配词条 {entry.id}，模糊匹配")
-                continue
-        # 检查正则表达式
-        elif entry.reg and UniMessage(keyword_msg).only(AlconnaText):
-            key = keyword_msg.extract_plain_text()
-            if re.match(entry.reg, key):
-                matches.append(entry)
-                logger.debug(f"匹配词条 {entry.id}，正则匹配 {entry.reg}")
-                continue
-        # 检查 alias（JSON）
-        elif entry.alias and keyword in json.loads(entry.alias):
-            matches.append(entry)
-            logger.debug(f"匹配词条 {entry.id}，别名匹配 {entry.alias}")
-            continue
-        #else:
-            #logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
-
-    if not matches:
-        return None
-
-    if len(matches) == 1:
-        return matches[0]
-
-    # 多条时按 date_modified 最新的返回
-    min_datetime = datetime.min.replace(tzinfo=UTC)
-    def _get_sort_key(entry: Index):
-        return entry.date_modified or entry.date_create or min_datetime
-
-    return max(matches, key=_get_sort_key)
-
-async def get_entries(
-    session : async_scoped_session,
-
-    scope_list : list[str],
-    *,
-    is_all : bool = False
-) -> Sequence[Index] | None:
-    """
-    返回在 scpoe_list 中且未被删除的词条。
-    - scope_list: 列表
-    - is_all: 是否返回所有条目，默认为 False
-    """
-    # 筛选未删除的条目
-    result = await session.execute(
-        select(Index).where(~Index.deleted)
-    )
-    # 获取所有未删除的条目
-    entries = result.scalars().all()
-
-    if is_all:
-        return entries
-
-    matches = []
-    for entry in entries:
-        # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
-        try:
-            scope_list_from_db = json.loads(entry.scope) if entry.scope else []
-            if not any(item in scope_list_from_db for item in scope_list):
-                continue
-        except json.JSONDecodeError:
-            continue
-        matches.append(entry)
-
-    if not matches:
-        return None
-
-    return matches
-
-async def get_entry_by_id(
-    session : async_scoped_session,
-    entry_id : int
-) -> Index | None:
-    """
-    返回 entry_id 对应的词条。
-    """
-    return await session.get(Index, entry_id)
 
 def remove_sticker_info(content_str: str) -> str:
     """
