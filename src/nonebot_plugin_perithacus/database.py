@@ -23,6 +23,7 @@ from sqlalchemy import (
     Text,
     create_engine,
     select,
+    update,
 )
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Mapped, mapped_column
@@ -31,8 +32,6 @@ from .lib import load_media
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from sqlalchemy.engine import Row
 
 
 class Index(Model):
@@ -106,6 +105,11 @@ class Content(Model):
     id: Mapped[int] = mapped_column(
         primary_key=True,
         autoincrement=True
+    )
+    entry_id: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="词条 ID"
     )
     content: Mapped[str] = mapped_column(
         Text,
@@ -198,37 +202,38 @@ async def create_version_table() -> None:
         conn.commit()
     engine.dispose()
 
-async def get_contents(entry_id: int) -> Sequence[Row]:
-    """
-    返回 Entry_{entry_id} 表中的所有 content
-    """
-    table_name = f"Entry_{entry_id}"
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
-    with engine.connect() as conn:
-        result = conn.execute(select(table).where(~table.c.deleted))
-        rows = result.fetchall()
-    engine.dispose()
-    return rows
+async def get_contents(
+    session : async_scoped_session,
 
-async def get_all_contents(entry_id: int) -> Sequence[Row]:
+    entry_id: int
+) -> Sequence[Content]:
     """
-    返回 Entry_{entry_id} 表中的所有 content
+    返回 {entry_id} 词条中的所有 content
+    """
+    result = await session.execute(
+        select(Content)
+        .where(~Content.deleted)
+        .where(Content.entry_id == entry_id)
+    )
+
+    return result.scalars().all()
+
+async def get_all_contents(
+    session : async_scoped_session,
+
+    entry_id: int
+) -> Sequence[Content]:
+    """
+    返回 {entry_id} 词条中的所有 content
     包含被标记为删除的 content
     """
-    table_name = f"Entry_{entry_id}"
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
-    with engine.connect() as conn:
-        result = conn.execute(select(table))
-        rows = result.fetchall()
-    engine.dispose()
-    return rows
 
+    result = await session.execute(
+        select(Content)
+        .where(Content.entry_id == entry_id)
+    )
+
+    return result.scalars().all()
 
 async def get_entry(
     session : async_scoped_session,
@@ -375,130 +380,91 @@ def compare_contents(content1: str, content2: str) -> bool:
     clean_content2 = remove_sticker_info(content2)
     return clean_content1 == clean_content2
 
-async def restore_deleted_content(table_id: int, row_id: int) -> None:
+async def restore_deleted_content(
+    session: async_scoped_session,
+
+    content_id: int
+) -> None:
     """
     将 table_name 表中 id 为 row_id 的 content 的 deleted 字段设置为 False
     """
-    table_name = f"Entry_{table_id}"
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
 
-    with engine.connect() as conn:
-        update = (
-            table.update()
-            .where(table.c.id == row_id)
-            .values(deleted=False, date_modified=datetime.now(UTC))
-        )
-        conn.execute(update)
-        conn.commit()
-    engine.dispose()
+    update_stmt = (
+        update(Content)
+        .where(Content.id == content_id)
+        .values(deleted=False)
+    )
+    await session.execute(update_stmt)
+    await session.commit()
 
-async def add_content(table_id: int, content: str) -> bool:
+async def add_content(
+    session : async_scoped_session,
+
+    entry_id: int,
+    content: str
+) -> bool:
     """
-    向 table_name 表中添加一条 content 。
-    返回 True 表示添加成功，返回 False 表示添加失败。
+    添加一条 content 。
+    返回 True 表示添加成功，返回 False 表示内容已存在。
     """
-    table_name = f"Entry_{table_id}"
-    # 提取所有的 content
-    rows = await get_all_contents(table_id)
+    rows = await get_all_contents(session, entry_id)
     for row in rows:
         if compare_contents(row.content, content):
             if not row.deleted:
                 return False
-            await restore_deleted_content(table_id, row.id)
-        else:
-            continue
+            await restore_deleted_content(session, row.id)
+            return True
 
-    logger.debug(f"添加内容 {content} 到表 {table_name}")
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
-
-    with engine.connect() as conn:
-        ins = (
-            table.insert()
-            .values(
-                content=content,
-                deleted=False,
-                date_modified=datetime.now(UTC),
-                date_create=datetime.now(UTC)
-            )
-        )
-        conn.execute(ins)
-        conn.commit()
-    engine.dispose()
+    logger.debug(f"添加内容 {content} 到 Content")
+    new_content = Content(
+        entry_id=entry_id,
+        content=content
+    )
+    session.add(new_content)
+    await session.commit()
     return True
 
-async def delete_content(table_id: int, content_id: int) -> bool:
+async def delete_content(session: async_scoped_session, content_id: int) -> None:
     """
-    将 table_id 表中的 content_id 记录标记为已删除
-    返回 True 删除成功，返回 False 删除失败
+    将 content_id 标记为已删除
     """
-    table_name = f"Entry_{table_id}"
-
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
-    try:
-        with engine.connect() as conn:
-            update_stmt = (
-                table.update()
-                .where(table.c.id == content_id)
-                .values(deleted=True, date_modified=datetime.now(UTC))
-            )
-            conn.execute(update_stmt)
-            conn.commit()
-    except SQLAlchemyError as e:
-        logger.error(f"删除内容 {content_id} 时出错：{e}")
-        return False
-    else:
-        logger.debug(f"内容 {content_id} 标记为已删除")
-        return True
-    finally:
-        engine.dispose()
+    update_stmt = (
+        update(Content)
+        .where(Content.id == content_id)
+        .values(deleted=True, date_modified=datetime.now(UTC))
+    )
+    await session.execute(update_stmt)
+    await session.commit()
 
 async def replace_content(
-        table_id: int,
-        content_id: int,
-        new_content: str
+    session : async_scoped_session,
+
+    entry_id: int,
+    content_id: int,
+    content: str
 ) -> bool:
     """
-    替换 table_id 表中的 id 记录的 content 为 new_content
+    替换 entry_id 中 content_id 记录的 content 为 new_content
     返回 True 删除成功，返回 False 删除失败
     """
-    table_name = f"Entry_{table_id}"
-    # 提取所有的 content
-    rows = await get_contents(table_id)
+
+    # 若有相同内容，则无需替换，返回 False
+    rows = await get_contents(session, entry_id)
     for row in rows:
-        if compare_contents(row.content, new_content):
+        if compare_contents(row.content, content):
             return False
 
-    logger.debug(f"替换内容 {new_content} 到表 {table_name}")
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
-    try:
-        with engine.connect() as conn:
-            update_stmt = (
-                table.update()
-                .where(table.c.id == content_id)
-                .values(content=new_content, date_modified=datetime.now(UTC))
-            )
-            conn.execute(update_stmt)
-            conn.commit()
-    except SQLAlchemyError as e:
-        logger.error(f"替换内容 {content_id} 时出错：{e}")
-        return False
-    else:
-        logger.debug(f"内容 {content_id} 已被替换")
-        return True
-    finally:
-        engine.dispose()
+    logger.debug(f"删除旧内容：{content_id}")
+    await delete_content(session, content_id)
+
+    logger.debug(f"添加新内容：{content}")
+    new_content = Content(
+        entry_id=entry_id,
+        content=content
+    )
+    session.add(new_content)
+    await session.commit()
+    return True
 
 async def upgrade_content_db_1_to_2() -> None:
     """
