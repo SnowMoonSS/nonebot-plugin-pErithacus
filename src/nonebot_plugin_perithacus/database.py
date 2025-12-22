@@ -102,6 +102,33 @@ class Index(Model):
         comment="词条创建时间戳"
     )
 
+class Content(Model):
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+        autoincrement=True
+    )
+    content: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="内容"
+    )
+    deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        comment="是否删除"
+    )
+    date_modified: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        comment="内容编辑时间戳"
+    )
+    date_create: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        comment="内容创建时间戳"
+    )
+
 async def create_content_list(table_name: str) -> None:
     """
     在 content.db 中创建一个名为 table_name 的表
