@@ -8,25 +8,22 @@ from apscheduler.triggers.cron import CronTrigger
 from nonebot import logger
 from nonebot_plugin_alconna import Target
 from nonebot_plugin_apscheduler import scheduler
-from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
+from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
 from .database import Index, get_contents
 from .lib import load_media
 
 
-async def execute_cron_task(
-    session: async_scoped_session,
-
-    entry_id: int
-) -> None:
+async def execute_cron_task(entry_id: int) -> None:
     """
     执行定时任务
     """
     logger.debug(f"执行定时任务，词条ID: {entry_id}")
 
+    session = get_session()
     existing_entry = await session.get(Index, entry_id)
-    contents = await get_contents(session, entry_id)
+    contents = await get_contents(entry_id)
     if existing_entry:
         if existing_entry.is_random:
             content = random.choice(contents)
@@ -48,11 +45,12 @@ async def execute_cron_task(
     await session.close()
 
 
-async def load_cron_tasks(session: async_scoped_session) -> None:
+async def load_cron_tasks() -> None:
     """
     从数据库加载所有带有cron表达式的任务
     """
     # 查询所有cron列有内容的行
+    session = get_session()
     result = await session.execute(
         select(Index)
         .where(Index.cron.isnot(None))
@@ -65,13 +63,12 @@ async def load_cron_tasks(session: async_scoped_session) -> None:
         logger.info(f"已加载 {len(entries)} 个定时任务")
         for entry in entries:
             logger.info(f"已加载定时任务，词条ID: {entry.id}")
-            add_cron_job(session, entry.id, entry.cron) # pyright: ignore[reportArgumentType]
+            add_cron_job(entry.id, entry.cron) # pyright: ignore[reportArgumentType]
     else:
         logger.info("未找到定时任务")
     await session.close()
 
 def add_cron_job(
-    session: async_scoped_session,
     entry_id: int,
     cron_expression: str
 ) -> None:
@@ -81,7 +78,7 @@ def add_cron_job(
     :param cron_expression: cron表达式
     """
     try:
-        job_func = partial(execute_cron_task, session, entry_id)
+        job_func = partial(execute_cron_task, entry_id)
         trigger = CronTrigger.from_crontab(cron_expression)
         scheduler.add_job(
             job_func,

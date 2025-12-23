@@ -17,7 +17,7 @@ from .lib import get_scope, get_source, load_media
 @pe.assign("list")
 async def _(  # noqa: PLR0913
     event: Event,
-    session : async_scoped_session,
+    session: async_scoped_session,
 
     page: Match[int] = AlconnaMatch("page"),
     scope: Match[str] = AlconnaMatch("scope"),
