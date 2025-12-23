@@ -21,7 +21,7 @@ call_kwargs = {}
 async def _(  # noqa: PLR0913
     event: Event,
     bot: Bot,
-    session : async_scoped_session,
+    session: async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     content: Match[UniMessage] = AlconnaMatch("content"),

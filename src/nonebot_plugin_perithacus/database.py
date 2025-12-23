@@ -102,25 +102,30 @@ class Index(Model):
         comment="词条创建时间戳"
     )
 
-async def get_entry(
-    session : async_scoped_session,
-
-    keyword : str,
-    scope_list : list[str],
-) -> Index | None:
+async def get_all_entries(
+    session: async_scoped_session,
+    *,
+    is_force: bool = False
+) -> Sequence[Index]:
     """
-    返回在 scpoe_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条。
+    返回所有词条。
+    - is_force: 是否返回包含已删除的所有条目
+    """
+    select_stmt = select(Index) if is_force else select(Index).where(~Index.deleted)
+    result = await session.execute(select_stmt)
+    return result.scalars().all()
+
+async def matching(
+    entries: Sequence[Index],
+    keyword: str,
+    scope_list: list[str],
+) -> Sequence[Index]:
+    """
+    返回在 scope_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条。
+    - entries: Index 对象列表
     - keyword: 经由 save_media 或者 convert_media 转换后的 JSON 字符串
-    - scope_list: 字符串列表
+    - scope_list: 列表
     """
-    # 筛选未删除的条目
-    result = await session.execute(
-        select(Index).where(~Index.deleted)
-    )
-    # 获取所有未删除的条目
-    entries = result.scalars().all()
-
-    # 进行匹配
     matches = []
     for entry in entries:
         # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
@@ -165,33 +170,45 @@ async def get_entry(
         #else:
             #logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
 
+    return matches
+
+async def get_entry(
+    session: async_scoped_session,
+
+    keyword: str,
+    scope_list: list[str],
+) -> Index | None:
+    """
+    返回在 scpoe_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条。
+    - keyword: 经由 save_media 或者 convert_media 转换后的 JSON 字符串
+    - scope_list: 字符串列表
+    """
+
+    entries = await get_all_entries(session)
+    matches = await matching(entries, keyword, scope_list)
     if not matches:
         return None
-
     if len(matches) == 1:
         return matches[0]
-
     # 多条时按 date_modified 最新的返回
     return max(matches, key=(lambda entry: entry.date_modified))
 
 async def get_entries(
-    session : async_scoped_session,
+    session: async_scoped_session,
 
-    scope_list : list[str],
+    scope_list: list[str],
     *,
-    is_all : bool = False
+    is_all: bool = False,
+    is_force: bool = False
 ) -> Sequence[Index] | None:
     """
     返回在 scpoe_list 中且未被删除的词条。
     - scope_list: 列表
-    - is_all: 是否返回所有条目，默认为 False
+    - is_all: 是否无视 scope_list 返回所有条目，默认为 False
+    - is_force: 是否返回包含已删除的所有条目，默认为 False
     """
-    # 筛选未删除的条目
-    result = await session.execute(
-        select(Index).where(~Index.deleted)
-    )
-    # 获取所有未删除的条目
-    entries = result.scalars().all()
+
+    entries = await get_all_entries(session, is_force=is_force)
 
     if is_all:
         return entries
@@ -213,10 +230,10 @@ async def get_entries(
     return matches
 
 async def update_entry(
-    session : async_scoped_session,
+    session: async_scoped_session,
 
-    entry : Index,
-    **kwargs : Any
+    entry: Index,
+    **kwargs: Any
 ) -> Index:
     """
     更新 entry。
@@ -248,9 +265,9 @@ async def update_entry(
     return entry
 
 async def add_entry(
-    session : async_scoped_session,
+    session: async_scoped_session,
 
-    **kwargs : Any
+    **kwargs: Any
 ) -> Index:
     """
     添加一个新的词条。
@@ -266,8 +283,8 @@ async def add_entry(
     return new_entry
 
 async def get_entry_by_id(
-    session : async_scoped_session,
-    entry_id : int
+    session: async_scoped_session,
+    entry_id: int
 ) -> Index | None:
     """
     返回 entry_id 对应的词条。
@@ -376,7 +393,7 @@ async def create_version_table() -> None:
     engine.dispose()
 
 async def get_contents(
-    session : async_scoped_session,
+    session: async_scoped_session,
 
     entry_id: int
 ) -> Sequence[Content]:
@@ -392,7 +409,7 @@ async def get_contents(
     return result.scalars().all()
 
 async def get_all_contents(
-    session : async_scoped_session,
+    session: async_scoped_session,
 
     entry_id: int
 ) -> Sequence[Content]:
@@ -448,7 +465,7 @@ async def restore_deleted_content(
     await session.commit()
 
 async def add_content(
-    session : async_scoped_session,
+    session: async_scoped_session,
 
     entry_id: int,
     content: str
@@ -487,8 +504,7 @@ async def delete_content(session: async_scoped_session, content_id: int) -> None
     await session.commit()
 
 async def replace_content(
-    session : async_scoped_session,
-
+    session: async_scoped_session,
     entry_id: int,
     content_id: int,
     content: str

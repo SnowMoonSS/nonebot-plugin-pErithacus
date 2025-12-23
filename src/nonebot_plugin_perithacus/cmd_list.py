@@ -15,33 +15,34 @@ from .lib import get_scope, get_source, load_media
 
 
 @pe.assign("list")
-async def _(
+async def _(  # noqa: PLR0913
     event: Event,
     session : async_scoped_session,
 
     page: Match[int] = AlconnaMatch("page"),
     scope: Match[str] = AlconnaMatch("scope"),
-    is_all: Query = AlconnaQuery("list.is_all", default=False)
+    is_all: Query = AlconnaQuery("list.is_all", default=False),
+    is_force: Query = AlconnaQuery("list.is_force", default=False)
 ):
     """
     列出所有词条。
     - page <int>: 页码，可选参数。列出指定页的词条内容。默认为第一页。
     - scope <str>: 作用域，可选参数。指定作用域以列出该作用域下的词条。
     - is_all <bool>: 可选参数。是否忽略scope参数列出所有词条，可选参数。默认为False。
+    - is_force <bool>: 可选参数。是否列出包括被删除的所有词条，可选参数。默认为False。
     """
 
     logger.debug(f"is_all: {is_all.result}")
 
     this_source = get_source(event)
-    try:
-        scope_list = get_scope(scope, this_source)
-    except ValueError as e:
-        await pe.finish(str(e))
+    scope_list = await get_scope(scope, this_source)
 
-    if is_all.result.value:
-        entries = await get_entries(session, scope_list, is_all=True)
-    else:
-        entries = await get_entries(session, scope_list)
+    entries = await get_entries(
+        session,
+        scope_list,
+        is_all=is_all.result.value,
+        is_force=is_force.result.value
+    )
 
     if entries:
         # 分页处理
