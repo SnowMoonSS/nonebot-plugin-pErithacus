@@ -12,6 +12,8 @@ from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import Match, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
+from .command import pe
+
 media_save_dir = get_plugin_data_dir() / "media"
 
 async def download_media(
@@ -182,7 +184,7 @@ def get_source(event: Event) -> str:
 
     return this_source
 
-def get_cron(cron: Match) -> None | str:
+async def get_cron(cron: Match) -> None | str:
     """
     验证 cron 表达式的基本格式，
     当用户提供的 cron 参数为 "None" 字符串时，将 cron 设置为 None
@@ -195,7 +197,7 @@ def get_cron(cron: Match) -> None | str:
                 CronTrigger.from_crontab(cron_expressions)
             except ValueError as e:
                 logger.error(f"cron参数格式错误: {e}")
-                raise
+                await pe.finish("cron参数格式错误")
         else:
             cron_expressions = None
     else:
@@ -203,7 +205,7 @@ def get_cron(cron: Match) -> None | str:
 
     return cron_expressions
 
-def get_scope(scope: Match, this_source: str) -> list[str]:
+async def get_scope(scope: Match, this_source: str) -> list[str]:
     """
     获取作用域列表
     """
@@ -213,6 +215,6 @@ def get_scope(scope: Match, this_source: str) -> list[str]:
     scope_list = scope.result.split(",")
     for s in scope_list:
         if not s.startswith(("g", "u")):
-            raise ValueError("scope参数必须以g或u开头")
+            await pe.finish("scope参数格式错误，应以 'g' 或 'u' 开头")
 
     return scope_list

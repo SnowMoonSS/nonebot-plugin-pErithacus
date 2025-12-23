@@ -32,6 +32,7 @@ from .lib import load_media
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
 
 
 class Index(Model):
@@ -171,11 +172,7 @@ async def get_entry(
         return matches[0]
 
     # 多条时按 date_modified 最新的返回
-    min_datetime = datetime.min.replace(tzinfo=UTC)
-    def _get_sort_key(entry: Index):
-        return entry.date_modified or entry.date_create or min_datetime
-
-    return max(matches, key=_get_sort_key)
+    return max(matches, key=(lambda entry: entry.date_modified))
 
 async def get_entries(
     session : async_scoped_session,
@@ -214,6 +211,57 @@ async def get_entries(
         return None
 
     return matches
+
+async def update_entry(
+    session : async_scoped_session,
+
+    entry : Index,
+    **kwargs : Any
+) -> Index:
+    """
+    更新 entry。
+    """
+
+    match_method = kwargs.get("match_method")
+    is_random = kwargs.get("is_random")
+    cron = kwargs.get("cron")
+    scope = kwargs.get("scope")
+    reg = kwargs.get("reg")
+    alias = kwargs.get("alias")
+
+    entry.match_method = (
+        match_method
+        if match_method is not None else entry.match_method
+    )
+    entry.is_random = is_random if is_random is not None else entry.is_random
+    entry.cron = cron if cron is not None else entry.cron
+    entry.scope = scope if scope is not None else entry.scope
+    entry.reg = reg if reg is not None else entry.reg
+    entry.alias = alias if alias is not None else entry.alias
+    entry.date_modified = datetime.now(UTC)
+
+    session.add(entry)
+    await session.commit()
+    await session.refresh(entry)
+    return entry
+
+async def add_entry(
+    session : async_scoped_session,
+
+    **kwargs : Any
+) -> Index:
+    """
+    添加一个新的词条。
+    """
+
+    new_entry = Index(
+        **kwargs
+    )
+    session.add(new_entry)
+    await session.commit()
+    await session.refresh(new_entry)
+    logger.debug(f"添加新词条 {new_entry.id} : {new_entry.keyword} 到 Index")
+    return new_entry
 
 async def get_entry_by_id(
     session : async_scoped_session,
