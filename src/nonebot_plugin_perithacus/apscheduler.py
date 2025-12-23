@@ -9,7 +9,6 @@ from nonebot import logger
 from nonebot_plugin_alconna import Target
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_orm import get_session
-from sqlalchemy import select
 
 from .database import Index, get_contents, get_cron_entries
 from .lib import load_media
