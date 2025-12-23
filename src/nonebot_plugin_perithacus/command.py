@@ -44,6 +44,7 @@ perithacus = Alconna(
         Arg("page?#页码", int, notice="列出指定页的词条"),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
         Option("-a|--all", dest="is_all", default=False, action=store_true),
+        Option("-f|--force", dest="is_force", default=False, action=store_true),
         help_text="列出词条",
     ),
     Subcommand(
