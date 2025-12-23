@@ -400,17 +400,22 @@ async def create_version_table() -> None:
 async def get_contents(
     session: async_scoped_session | AsyncSession,
 
-    entry_id: int
+    entry_id: int,
+    *,
+    is_all: bool = False
 ) -> Sequence[Content]:
     """
     返回 {entry_id} 词条中的所有 content
     """
-    result = await session.execute(
-        select(Content)
-        .where(~Content.deleted)
-        .where(Content.entry_id == entry_id)
-    )
-
+    if is_all:
+        select_stmt = select(Content).where(Content.entry_id == entry_id)
+    else:
+        select_stmt = (
+            select(Content)
+            .where(~Content.deleted)
+            .where(Content.entry_id == entry_id)
+        )
+    result = await session.execute(select_stmt)
     return result.scalars().all()
 
 async def get_all_contents(
@@ -422,12 +427,8 @@ async def get_all_contents(
     返回 {entry_id} 词条中的所有 content
     包含被标记为删除的 content
     """
-
-    result = await session.execute(
-        select(Content)
-        .where(Content.entry_id == entry_id)
-    )
-
+    select_stmt = select(Content).where(Content.entry_id == entry_id)
+    result = await session.execute(select_stmt)
     return result.scalars().all()
 
 def remove_sticker_info(content_str: str) -> str:

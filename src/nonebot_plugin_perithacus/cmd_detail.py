@@ -4,7 +4,7 @@ from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, Uni
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
-from .database import get_all_contents, get_contents, get_entry_by_id
+from .database import get_contents, get_entry_by_id
 from .lib import load_media
 
 
@@ -14,16 +14,25 @@ async def _(
 
     entry_id: Match[int] = AlconnaMatch("id"),
     page: Match[int] = AlconnaMatch("page"),
-    force: Query = AlconnaQuery("detail.force", default=False),
-    is_all: Query = AlconnaQuery("detail.is_all", default=False)
+    is_all: Query = AlconnaQuery("detail.is_all", default=False),
+    is_force: Query = AlconnaQuery("detail.is_force", default=False),
 ):
+    """
+    查看指定词条的详细信息。
+    - id <int>: 词条 ID，必填参数。查看指定 ID 的词条的详细信息。
+    - page <int>: 页码，可选参数。查看指定页的词条内容。默认为第一页。
+    - is_force <bool>: 可选参数。是否查看包含已删除词条的内容，默认为False。
+    - is_all <bool>: 可选参数。是否忽略scope参数查看所有词条
+    """
+
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
-        if force.result.value or not entry.deleted:
-            if is_all.result.value:
-                rows = await get_all_contents(session, entry_id.result)
-            else:
-                rows = await get_contents(session, entry_id.result)
+        if is_force.result.value or not entry.deleted:
+            rows = await get_contents(
+                session,
+                entry_id.result,
+                is_all=is_all.result.value
+            )
 
             # 分页处理
             page_size = 5
@@ -60,7 +69,7 @@ async def _(
 
             await pe.finish(msg)
 
-        elif not force.result.value and entry.deleted:
+        elif entry.deleted:
             await pe.finish(
                 "请输入有效的词条 ID 。使用 search 或 list 命令查看词条列表。"
             )

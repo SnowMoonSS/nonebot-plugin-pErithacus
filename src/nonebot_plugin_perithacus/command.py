@@ -69,8 +69,8 @@ perithacus = Alconna(
             Arg("id", int, notice="词条ID"),
             Arg("page?#页码", int, notice="列出指定页的词条内容"),
         ),
-        Option("-f|--force", default=False, action=store_true),
         Option("-a|--all", dest="is_all", default=False, action=store_true),
+        Option("-f|--force", dest="is_force", default=False, action=store_true),
         help_text="查看指定词条的详细内容",
     ),
     Subcommand(
