@@ -15,7 +15,6 @@ from .database import (
 )
 from .lib import get_cron, get_scope, get_source, load_media, save_media
 
-call_kwargs = {}
 
 @pe.assign("add")
 async def _(  # noqa: PLR0913
@@ -47,17 +46,28 @@ async def _(  # noqa: PLR0913
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
         if await add_content(session, existing_entry.id, content_text):
-            handle_match_method(match_method)
-            handle_is_random(is_random)
-            await handle_cron(existing_entry, cron)
-            handle_scope(scope_list, existing_entry, scope)
-            handle_reg(reg)
-            handle_alias(alias_text, existing_entry, alias)
+            update_kwargs = {}
+            update_kwargs = handle_match_method(update_kwargs, match_method)
+            update_kwargs = handle_is_random(update_kwargs, is_random)
+            update_kwargs = await handle_cron(update_kwargs, existing_entry, cron)
+            update_kwargs = handle_scope(
+                update_kwargs,
+                scope_list,
+                existing_entry,
+                scope
+            )
+            update_kwargs = handle_reg(update_kwargs, reg)
+            update_kwargs = handle_alias(
+                update_kwargs,
+                alias_text,
+                existing_entry,
+                alias
+            )
 
             existing_entry = await update_entry(
                 session,
                 existing_entry,
-                **call_kwargs
+                **update_kwargs
             )
 
             uni_keyword = load_media(existing_entry.keyword)
@@ -97,27 +107,36 @@ async def _(  # noqa: PLR0913
             f"词条 {new_entry.id} : " + uni_keyword + " 已创建并加入了新的内容"
         )
 
-def handle_match_method(match_method: Match) -> None:
+def handle_match_method(update_kwargs: dict, match_method: Match) -> dict:
     if match_method.available:
-        call_kwargs["match_method"] = match_method.result
+        update_kwargs["match_method"] = match_method.result
+    return update_kwargs
 
-def handle_is_random(is_random: Match) -> None:
+def handle_is_random(update_kwargs: dict, is_random: Match) -> dict:
     if is_random.available:
-        call_kwargs["is_random"] = is_random.result
+        update_kwargs["is_random"] = is_random.result
+    return update_kwargs
 
 async def handle_cron(
+    update_kwargs: dict,
     entry: Index,
     cron: Match
-) -> None:
+) -> dict:
     if cron.available:
         cron_expressions = await get_cron(cron)
-        call_kwargs["cron"] = cron_expressions
+        update_kwargs["cron"] = cron_expressions
         if cron_expressions:
             add_cron_job(entry.id, cron_expressions)
         else:
             remove_cron_job(entry.id)
+    return update_kwargs
 
-def handle_scope(scope_list: list, entry: Index, scope: Match) -> None:
+def handle_scope(
+    update_kwargs: dict,
+    scope_list: list,
+    entry: Index,
+    scope: Match
+) -> dict:
     if scope.available:
         try:
             scope_list_from_db = json.loads(entry.scope) if entry.scope else []
@@ -125,17 +144,25 @@ def handle_scope(scope_list: list, entry: Index, scope: Match) -> None:
             scope_list_from_db = []
         if not any(item in scope_list_from_db for item in scope_list):
             scope_list_from_db.extend(scope_list)
-        call_kwargs["scope"] = json.dumps(scope_list_from_db)
+        update_kwargs["scope"] = json.dumps(scope_list_from_db)
+    return update_kwargs
 
-def handle_alias(alias_text: str, entry: Index, alias: Match) -> None:
+def handle_alias(
+    update_kwargs: dict,
+    alias_text: str,
+    entry: Index,
+    alias: Match
+) -> dict:
     if alias.available:
         # 解析已有别名列表
         alias_list = json.loads(entry.alias) if entry.alias else []
         new_alias = alias_text
         if new_alias and new_alias not in alias_list:
             alias_list.append(new_alias)
-        call_kwargs["alias"] = json.dumps(alias_list) if alias_list else None
+        update_kwargs["alias"] = json.dumps(alias_list) if alias_list else None
+    return update_kwargs
 
-def handle_reg(reg: Match) -> None:
+def handle_reg(update_kwargs: dict, reg: Match) -> dict:
     if reg.available:
-        call_kwargs["reg"] = reg.result
+        update_kwargs["reg"] = reg.result
+    return update_kwargs
