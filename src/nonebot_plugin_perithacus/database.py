@@ -291,6 +291,11 @@ async def get_entry_by_id(
     """
     return await session.get(Index, entry_id)
 
+async def get_cron_entries(session: AsyncSession) -> Sequence[Index]:
+    select_stmt = select(Index).where(Index.cron.isnot(None)).where(~Index.deleted)
+    results = await session.execute(select_stmt)
+    return results.scalars().all()
+
 class Content(Model):
     id: Mapped[int] = mapped_column(
         primary_key=True,

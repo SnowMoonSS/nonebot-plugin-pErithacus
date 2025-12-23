@@ -11,7 +11,7 @@ from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_orm import get_session
 from sqlalchemy import select
 
-from .database import Index, get_contents
+from .database import Index, get_contents, get_cron_entries
 from .lib import load_media
 
 
@@ -48,23 +48,17 @@ async def load_cron_tasks() -> None:
     从数据库加载所有带有cron表达式的任务
     """
     # 查询所有cron列有内容的行
-    session = get_session()
-    result = await session.execute(
-        select(Index)
-        .where(Index.cron.isnot(None))
-        .where(~Index.deleted)
-    )
-    entries = result.scalars().all()
+    async with get_session() as session:
+        entries = await get_cron_entries(session)
 
-    # 为每个有cron表达式的词条创建定时任务
-    if entries:
-        logger.info(f"已加载 {len(entries)} 个定时任务")
-        for entry in entries:
-            logger.info(f"已加载定时任务，词条ID: {entry.id}")
-            add_cron_job(entry.id, entry.cron) # pyright: ignore[reportArgumentType]
-    else:
-        logger.info("未找到定时任务")
-    await session.close()
+        # 为每个有cron表达式的词条创建定时任务
+        if entries:
+            logger.info(f"已加载 {len(entries)} 个定时任务")
+            for entry in entries:
+                logger.info(f"已加载定时任务，词条ID: {entry.id}")
+                add_cron_job(entry.id, entry.cron) # pyright: ignore[reportArgumentType]
+        else:
+            logger.info("未找到定时任务")
 
 def add_cron_job(
     entry_id: int,
