@@ -21,9 +21,9 @@ async def _(
     if entry:
         if force.result.value or not entry.deleted:
             if is_all.result.value:
-                rows = await get_all_contents(entry_id.result)
+                rows = await get_all_contents(session, entry_id.result)
             else:
-                rows = await get_contents(entry_id.result)
+                rows = await get_contents(session, entry_id.result)
 
             # 分页处理
             page_size = 5

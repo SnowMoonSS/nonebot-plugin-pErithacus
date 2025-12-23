@@ -21,28 +21,26 @@ async def execute_cron_task(entry_id: int) -> None:
     """
     logger.debug(f"执行定时任务，词条ID: {entry_id}")
 
-    session = get_session()
-    existing_entry = await session.get(Index, entry_id)
-    contents = await get_contents(entry_id)
-    if existing_entry:
-        if existing_entry.is_random:
-            content = random.choice(contents)
-            logger.debug(f"随机选择内容 ID {content.id} 进行发送")
-        else:
-            content = max(contents, key=lambda x: x.date_modified)
-            logger.debug(f"选择最新内容 ID {content.id} 进行发送")
-        for scope in json.loads(existing_entry.scope):
-            target = Target.load(json.loads(existing_entry.target))
-            if scope.startswith("g"):
-                target.id = scope[1:]
-                target.private = False
+    async with get_session() as session:
+        existing_entry = await session.get(Index, entry_id)
+        contents = await get_contents(session, entry_id)
+        if existing_entry:
+            if existing_entry.is_random:
+                content = random.choice(contents)
+                logger.debug(f"随机选择内容 ID {content.id} 进行发送")
+            else:
+                content = max(contents, key=lambda x: x.date_modified)
+                logger.debug(f"选择最新内容 ID {content.id} 进行发送")
+            for scope in json.loads(existing_entry.scope):
+                target = Target.load(json.loads(existing_entry.target))
+                if scope.startswith("g"):
+                    target.id = scope[1:]
+                    target.private = False
+                elif scope.startswith("u"):
+                    target.id = scope[1:]
+                    target.private = True
                 await load_media(content.content).send(target)
-            elif scope.startswith("u"):
-                target.id = scope[1:]
-                target.private = True
-                await load_media(content.content).send(target)
-            await asyncio.sleep(random.uniform(0, 1))
-    await session.close()
+                await asyncio.sleep(random.uniform(0, 1))
 
 
 async def load_cron_tasks() -> None:

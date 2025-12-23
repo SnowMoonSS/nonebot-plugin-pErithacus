@@ -11,7 +11,7 @@ from nonebot import logger
 from nonebot_plugin_alconna import Text as AlconnaText
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
-from nonebot_plugin_orm import Model, async_scoped_session, get_session
+from nonebot_plugin_orm import AsyncSession, Model, async_scoped_session
 from sqlalchemy import (
     Boolean,
     Column,
@@ -393,19 +393,19 @@ async def create_version_table() -> None:
     engine.dispose()
 
 async def get_contents(
+    session: async_scoped_session | AsyncSession,
+
     entry_id: int
 ) -> Sequence[Content]:
     """
     返回 {entry_id} 词条中的所有 content
     """
-    session = get_session()
     result = await session.execute(
         select(Content)
         .where(~Content.deleted)
         .where(Content.entry_id == entry_id)
     )
 
-    await session.close()
     return result.scalars().all()
 
 async def get_all_contents(
@@ -516,7 +516,7 @@ async def replace_content(
     """
 
     # 若有相同内容，则无需替换，返回 False
-    rows = await get_contents(entry_id)
+    rows = await get_contents(session, entry_id)
     for row in rows:
         if compare_contents(row.content, content):
             return False
