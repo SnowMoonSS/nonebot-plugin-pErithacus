@@ -11,7 +11,7 @@ from nonebot import logger
 from nonebot_plugin_alconna import Text as AlconnaText
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
-from nonebot_plugin_orm import Model, async_scoped_session
+from nonebot_plugin_orm import Model, async_scoped_session, get_session
 from sqlalchemy import (
     Boolean,
     Column,
@@ -505,6 +505,7 @@ async def delete_content(session: async_scoped_session, content_id: int) -> None
 
 async def replace_content(
     session: async_scoped_session,
+
     entry_id: int,
     content_id: int,
     content: str

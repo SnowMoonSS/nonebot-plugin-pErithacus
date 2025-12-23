@@ -49,7 +49,7 @@ async def _(  # noqa: PLR0913
         if await add_content(session, existing_entry.id, content_text):
             handle_match_method(match_method)
             handle_is_random(is_random)
-            await handle_cron(existing_entry, cron)
+            await handle_cron(session, existing_entry, cron)
             handle_scope(scope_list, existing_entry, scope)
             handle_reg(reg)
             handle_alias(alias_text, existing_entry, alias)
@@ -90,7 +90,7 @@ async def _(  # noqa: PLR0913
         )
         await add_content(session, new_entry.id, content_text)
         if cron_expressions:
-            add_cron_job(new_entry.id, cron_expressions)
+            add_cron_job(session, new_entry.id, cron_expressions)
 
         uni_keyword = load_media(new_entry.keyword)
         await pe.finish(
@@ -105,12 +105,17 @@ def handle_is_random(is_random: Match) -> None:
     if is_random.available:
         call_kwargs["is_random"] = is_random.result
 
-async def handle_cron(entry: Index, cron: Match) -> None:
+async def handle_cron(
+    session: async_scoped_session,
+
+    entry: Index,
+    cron: Match
+) -> None:
     if cron.available:
         cron_expressions = await get_cron(cron)
         call_kwargs["cron"] = cron_expressions
         if cron_expressions:
-            add_cron_job(entry.id, cron_expressions)
+            add_cron_job(session, entry.id, cron_expressions)
         else:
             remove_cron_job(entry.id)
 
