@@ -222,22 +222,24 @@ async def update_entry(
     更新 entry。
     """
 
-    match_method = kwargs.get("match_method")
-    is_random = kwargs.get("is_random")
-    cron = kwargs.get("cron")
-    scope = kwargs.get("scope")
-    reg = kwargs.get("reg")
-    alias = kwargs.get("alias")
+    if "match_method" in kwargs:
+        entry.match_method = kwargs["match_method"]
 
-    entry.match_method = (
-        match_method
-        if match_method is not None else entry.match_method
-    )
-    entry.is_random = is_random if is_random is not None else entry.is_random
-    entry.cron = cron if cron is not None else entry.cron
-    entry.scope = scope if scope is not None else entry.scope
-    entry.reg = reg if reg is not None else entry.reg
-    entry.alias = alias if alias is not None else entry.alias
+    if "is_random" in kwargs:
+        entry.is_random = kwargs["is_random"]
+
+    if "cron" in kwargs:
+        entry.cron = kwargs["cron"]
+
+    if "scope" in kwargs:
+        entry.scope = kwargs["scope"]
+
+    if "reg" in kwargs:
+        entry.reg = kwargs["reg"]
+
+    if "alias" in kwargs:
+        entry.alias = kwargs["alias"]
+
     entry.date_modified = datetime.now(UTC)
 
     session.add(entry)
