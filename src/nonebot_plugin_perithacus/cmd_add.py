@@ -2,7 +2,7 @@ import json
 
 from nonebot.adapters import Bot, Event  # noqa: TC002
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, get_target
-from nonebot_plugin_orm import AsyncSession, async_scoped_session  # noqa: TC002
+from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .apscheduler import add_cron_job, remove_cron_job
 from .command import pe
