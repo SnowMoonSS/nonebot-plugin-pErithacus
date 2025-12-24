@@ -18,10 +18,11 @@ from . import cmd_list as cmd_list
 from . import cmd_search as cmd_search
 from . import command as command
 from . import database as database
+from . import handle_args as handle_args
 from . import lib as lib
 from . import trigger as trigger
 from .apscheduler import load_cron_tasks
-from .database import upgrade_content_db_1_to_2
+from .upgrade_database import upgrade_content_db_1_to_2, upgrade_content_db_2_to_3
 
 driver = get_driver()
 
@@ -49,3 +50,4 @@ async def _load_perithacus():
         logger.exception("运行时错误（如调度器未初始化）: %s", e)
 
     await upgrade_content_db_1_to_2()
+    await upgrade_content_db_2_to_3()

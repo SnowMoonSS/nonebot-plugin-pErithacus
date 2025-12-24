@@ -11,7 +11,7 @@ from nonebot import logger
 from nonebot_plugin_alconna import Text as AlconnaText
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
-from nonebot_plugin_orm import AsyncSession, Model, async_scoped_session
+from nonebot_plugin_orm import AsyncSession, Model, async_scoped_session, get_session
 from sqlalchemy import (
     Boolean,
     Column,
@@ -32,6 +32,7 @@ from .lib import load_media
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from pathlib import Path
     from typing import Any
 
 
@@ -453,7 +454,7 @@ def compare_contents(content1: str, content2: str) -> bool:
     return clean_content1 == clean_content2
 
 async def restore_deleted_content(
-    session: async_scoped_session,
+    session: async_scoped_session | AsyncSession,
 
     content_id: int
 ) -> None:
@@ -470,10 +471,12 @@ async def restore_deleted_content(
     await session.commit()
 
 async def add_content(
-    session: async_scoped_session,
+    session: async_scoped_session | AsyncSession,
 
     entry_id: int,
-    content: str
+    content: str,
+    date_modified: datetime = datetime.now(UTC),
+    date_create: datetime = datetime.now(UTC)
 ) -> bool:
     """
     添加一条 content 。
@@ -490,7 +493,9 @@ async def add_content(
     logger.debug(f"添加内容 {content} 到 Content")
     new_content = Content(
         entry_id=entry_id,
-        content=content
+        content=content,
+        date_modified=date_modified,
+        date_create=date_create
     )
     session.add(new_content)
     await session.commit()
@@ -537,140 +542,3 @@ async def replace_content(
     session.add(new_content)
     await session.commit()
     return True
-
-async def upgrade_content_db_1_to_2() -> None:
-    """
-    升级数据库表结构：检查并升级content.db中所有以Entry_开头的表结构，
-    将不带时区的北京时间转换为带UTC时区的时间
-    """
-
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    try:
-        metadata = MetaData()
-        metadata.reflect(bind=engine)
-
-        # 检查是否存在content_version表
-        if "content_version" in metadata.tables:
-            logger.info("content.db 已经是最新版本，无需升级")
-            engine.dispose()
-            return
-
-        logger.info("开始升级数据库表结构")
-
-        # 获取所有以Entry_开头的表
-        entry_tables = [
-            table_name for table_name in metadata.tables
-            if table_name.startswith("Entry_")
-        ]
-
-        for table_name in entry_tables:
-            logger.info(f"正在升级表 {table_name}")
-            try:
-                # 获取旧表结构
-                old_table = metadata.tables[table_name]
-
-                # 创建新表结构
-                new_metadata = MetaData()
-                new_table = Table(
-                    f"new_{table_name}",
-                    new_metadata,
-                    Column(
-                        "id",
-                        Integer,
-                        primary_key=True,
-                        autoincrement=True
-                    ),
-                    Column(
-                        "content",
-                        Text,
-                        nullable=False,
-                    ),
-                    Column(
-                        "deleted",
-                        Boolean,
-                        default=False,
-                    ),
-                    Column(
-                        "date_modified",
-                        DateTime(timezone=True),
-                        default=lambda: datetime.now(UTC),
-                        onupdate=lambda: datetime.now(UTC)
-                    ),
-                    Column(
-                        "date_create",
-                        DateTime(timezone=True),
-                        default=lambda: datetime.now(UTC)
-                    ),
-                )
-
-                # 创建新表
-                new_metadata.create_all(engine)
-
-                # 迁移数据
-                with engine.connect() as conn:
-                    # 查询旧表的所有数据
-                    select_stmt = select(old_table)
-                    result = conn.execute(select_stmt)
-                    rows = result.fetchall()
-
-                    # 转换数据并插入新表
-                    for row in rows:
-                        # 转换时间字段
-                        date_modified = (
-                            row.dateModified
-                            if hasattr(row, "dateModified") else row.date_modified
-                        )
-                        date_create = (
-                            row.dateCreate
-                            if hasattr(row, "dateCreate") else row.date_create
-                        )
-
-                        # 如果是 naive datetime，假设为北京时间并转换为 UTC
-                        if date_modified and date_modified.tzinfo is None:
-                            # 假设原时间为北京时间
-                            beijing_tz = tz(timedelta(hours=8))
-                            date_modified = date_modified.replace(tzinfo=beijing_tz)
-                            # 转换为 UTC
-                            date_modified = date_modified.astimezone(UTC)
-
-                        if date_create and date_create.tzinfo is None:
-                            # 假设原时间为北京时间
-                            beijing_tz = tz(timedelta(hours=8))
-                            date_create = date_create.replace(tzinfo=beijing_tz)
-                            # 转换为 UTC
-                            date_create = date_create.astimezone(UTC)
-
-                        # 插入到新表
-                        insert_stmt = new_table.insert().values(
-                            id=row.id,
-                            content=row.content,
-                            deleted=row.deleted if hasattr(row, "deleted") else False,
-                            date_modified=date_modified,
-                            date_create=date_create
-                        )
-                        conn.execute(insert_stmt)
-
-                    conn.commit()
-
-                # 删除旧表，重命名新表
-                with engine.connect() as conn:
-                    drop_stmt = sa.text(f"DROP TABLE {table_name}")
-                    conn.execute(drop_stmt)
-                    conn.commit()
-
-                    rename_stmt = sa.text(
-                        f"ALTER TABLE new_{table_name} RENAME TO {table_name}"
-                    )
-                    conn.execute(rename_stmt)
-                    conn.commit()
-
-            except SQLAlchemyError as e:
-                logger.error(f"升级表 {table_name} 时出错: {e}")
-                continue
-    finally:
-        engine.dispose()
-
-    # 创建版本表
-    await create_version_table()
-    logger.info("content.db 升级完成")
