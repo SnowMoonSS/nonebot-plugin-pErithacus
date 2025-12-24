@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import (
 from .database import Content, create_version_table
 
 
-async def upgrade_content_db_1_to_2() -> None:
+def upgrade_content_db_1_to_2() -> None:
     """
     升级数据库表结构：检查并升级content.db中所有以Entry_开头的表结构，
     将不带时区的北京时间转换为带UTC时区的时间
@@ -164,7 +164,7 @@ async def upgrade_content_db_1_to_2() -> None:
         engine.dispose()
 
     # 创建版本表
-    await create_version_table()
+    create_version_table()
     logger.info("content.db 升级完成")
 
 

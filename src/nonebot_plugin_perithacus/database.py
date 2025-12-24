@@ -366,10 +366,10 @@ async def create_content_list(table_name: str) -> None:
     metadata.create_all(engine, tables=[table])
     metadata.reflect(bind=engine)
     if "content_version" not in metadata.tables:
-        await create_version_table()
+        create_version_table()
     engine.dispose()
 
-async def create_version_table() -> None:
+def create_version_table() -> None:
     """
     在 content.db 中创建一个记录数据库版本的表
     """

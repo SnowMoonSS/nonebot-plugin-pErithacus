@@ -49,5 +49,5 @@ async def _load_perithacus():
     except RuntimeError as e:
         logger.exception("运行时错误（如调度器未初始化）: %s", e)
 
-    await upgrade_content_db_1_to_2()
+    upgrade_content_db_1_to_2()
     await upgrade_content_db_2_to_3()
