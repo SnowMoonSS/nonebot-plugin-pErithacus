@@ -406,6 +406,7 @@ async def get_contents(
 ) -> Sequence[Content]:
     """
     返回 {entry_id} 词条中的所有 content
+    is_all 为 True 时返回包含已删除的所有 content
     """
     if is_all:
         select_stmt = select(Content).where(Content.entry_id == entry_id)
@@ -420,14 +421,12 @@ async def get_contents(
 
 async def get_all_contents(
     session: async_scoped_session,
-
-    entry_id: int
 ) -> Sequence[Content]:
     """
     返回 {entry_id} 词条中的所有 content
     包含被标记为删除的 content
     """
-    select_stmt = select(Content).where(Content.entry_id == entry_id)
+    select_stmt = select(Content)
     result = await session.execute(select_stmt)
     return result.scalars().all()
 
@@ -480,7 +479,7 @@ async def add_content(
     添加一条 content 。
     返回 True 表示添加成功，返回 False 表示内容已存在。
     """
-    rows = await get_all_contents(session, entry_id)
+    rows = await get_contents(session, entry_id)
     for row in rows:
         if compare_contents(row.content, content):
             if not row.deleted:
