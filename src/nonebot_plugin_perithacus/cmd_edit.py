@@ -1,20 +1,31 @@
-import json
-from datetime import UTC, datetime
 
-from apscheduler.triggers.cron import CronTrigger
-from nonebot import logger
 from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
-from .apscheduler import add_cron_job, remove_cron_job
 from .command import pe
-from .database import add_content, delete_content, get_entry
-from .lib import convert_media, get_cron, get_scope, get_source, save_media
+from .database import (
+    delete_content,
+    get_entry,
+    replace_content,
+    update_entry,
+)
+from .lib import (
+    get_scope,
+    get_source,
+    handle_alias,
+    handle_cron,
+    handle_is_random,
+    handle_match_method,
+    handle_reg,
+    handle_scope,
+    load_media,
+    save_media,
+)
 
 
 @pe.assign("edit")
-async def _(
+async def _(  # noqa: PLR0913
     event: Event,
     session : async_scoped_session,
 
@@ -45,94 +56,58 @@ async def _(
     ):
         await pe.finish("未提供修改项")
 
-    keyword_text = await convert_media(keyword.result)
+    keyword_text = await save_media(keyword.result)
+    content_text = await save_media(content.result)
     this_source = get_source(event)
-    try:
-        cron_expressions = get_cron(cron)
-    except ValueError:
-        await pe.finish("cron参数格式错误")
-    try:
-        scope_list = get_scope(scope, this_source)
-    except ValueError as e:
-        await pe.finish(str(e))
-
-    # 处理alias
-    alias_text = convert_media(alias.result)
-
+    scope_list = await get_scope(scope, this_source)
+    alias_text = await save_media(alias.result)
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
-        # 更新已有条目（只在用户提供对应参数时修改）
-        if match_method.available:
-            existing_entry.match_method = match_method.result
+        update_kwargs = {}
+        update_kwargs = handle_match_method(update_kwargs, match_method)
+        update_kwargs = handle_is_random(update_kwargs, is_random)
+        update_kwargs = await handle_cron(update_kwargs, existing_entry, cron)
+        update_kwargs = handle_scope(
+            update_kwargs,
+            scope_list,
+            existing_entry,
+            scope
+        )
+        update_kwargs = handle_reg(update_kwargs, reg)
+        update_kwargs = handle_alias(
+            update_kwargs,
+            alias_text,
+            existing_entry,
+            alias
+        )
 
-        if is_random.available:
-            existing_entry.is_random = is_random.result
+        existing_entry = await update_entry(
+            session,
+            existing_entry,
+            **update_kwargs
+        )
 
-        if cron.available:
-            existing_entry.cron = cron_expressions
-            if cron_expressions:
-                add_cron_job(existing_entry.id, cron_expressions)
-            else:
-                remove_cron_job(existing_entry.id)
-
-        # 将新作用域合并到已有 JSON 列表
-        # 在作用域内执行del命令移除指定作用域
-        if scope.available:
-            try:
-                if existing_entry.scope:
-                    scope_list_from_db = json.loads(existing_entry.scope)
-                else:
-                    scope_list_from_db = []
-            except json.JSONDecodeError:
-                scope_list_from_db = []
-            for item in scope_list:
-                if item not in scope_list_from_db:
-                    scope_list_from_db.append(item)
-                    logger.debug(f"添加新的作用域：{item}")
-            existing_entry.scope = json.dumps(scope_list_from_db)
-
-        # 合并到已有 JSON 列表
-        if alias.available:
-            # 解析已有别名列表
-            if existing_entry.alias:
-                alias_list = json.loads(existing_entry.alias)
-            else:
-                alias_list = []
-            new_alias = alias_text
-            if new_alias and new_alias not in alias_list:
-                alias_list.append(new_alias)
-            existing_entry.alias = json.dumps(alias_list) if alias_list else None
-
-        if reg.available:
-            existing_entry.reg = reg.result
-
-        existing_entry.date_modified=datetime.now(UTC)
-
-        # 提交修改并刷新实体
-        session.add(existing_entry)
-        await session.commit()
-        await session.refresh(existing_entry)
+        uni_keyword = load_media(existing_entry.keyword)
         msg = UniMessage(
-            f"词条 {existing_entry.id} : " + UniMessage(keyword.result) + " 修改成功！"
+            f"词条 {existing_entry.id} : " + uni_keyword + " 修改成功！"
         )
 
         if delete_id.available:
             # 删除指定的内容
-            result = await delete_content(existing_entry.id, delete_id.result)
+            result = await delete_content(session, delete_id.result)
             if result:
                 msg.append("\n删除内容成功！")
             else:
                 msg.append("\n删除内容失败，请检查内容编号是否正确")
 
         if replace_id.available and content.available:
-            # 将被替换的内容标记为已删除
-            delete = await delete_content(existing_entry.id, replace_id.result)
-
-            # 添加新的内容
-            content_text = await save_media(content.result)
-            add = await add_content(existing_entry.id, content_text)
-            if delete and add:
+            if await replace_content(
+                session,
+                existing_entry.id,
+                replace_id.result,
+                content_text
+            ):
                 msg.append("\n替换内容成功！")
             else:
                 msg.append("\n替换内容失败，请检查内容编号是否正确")

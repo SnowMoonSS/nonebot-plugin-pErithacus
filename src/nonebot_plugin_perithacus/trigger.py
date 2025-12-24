@@ -13,7 +13,7 @@ from .lib import get_source, load_media, uni_message_to_dumpped_data
 @on_every_message.handle()
 async def _(
     event: Event,
-    session : async_scoped_session,
+    session: async_scoped_session,
     msg: UniMsg,
 ):
     msg_text = uni_message_to_dumpped_data(msg)
@@ -24,7 +24,7 @@ async def _(
     existing_entry = await get_entry(session, msg_text, scope_list)
     if existing_entry:
         logger.debug(f"找到匹配的词条 ID {existing_entry.id}")
-        contents = await get_contents(existing_entry.id)
+        contents = await get_contents(session, existing_entry.id)
         if contents:
             logger.debug("找到匹配的词条内容")
             if existing_entry.is_random:
