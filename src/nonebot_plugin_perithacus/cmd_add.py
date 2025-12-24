@@ -12,16 +12,18 @@ from .database import (
     get_entry,
     update_entry,
 )
-from .lib import (
-    get_cron,
-    get_scope,
-    get_source,
+from .handle_args import (
     handle_alias,
     handle_cron,
     handle_is_random,
     handle_match_method,
     handle_reg,
     handle_scope,
+)
+from .lib import (
+    get_cron,
+    get_scope,
+    get_source,
     load_media,
     save_media,
 )
