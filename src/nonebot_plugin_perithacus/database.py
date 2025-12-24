@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import UTC, datetime, timedelta
-from datetime import timezone as tz
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-import sqlalchemy as sa
 from nonebot import logger
 from nonebot_plugin_alconna import Text as AlconnaText
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
-from nonebot_plugin_orm import AsyncSession, Model, async_scoped_session, get_session
+from nonebot_plugin_orm import AsyncSession, Model, async_scoped_session
 from sqlalchemy import (
     Boolean,
     Column,
@@ -25,14 +23,12 @@ from sqlalchemy import (
     select,
     update,
 )
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .lib import load_media
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from pathlib import Path
     from typing import Any
 
 
