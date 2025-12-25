@@ -140,11 +140,11 @@ dmypy.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-cache/
-config/
-data/
-docs/
-migrations/
+/cache/
+/config/
+/data/
+/docs/
+/migrations/
 .env.dev
 .env.prod
 .ruff_cache/
