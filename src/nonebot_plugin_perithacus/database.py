@@ -19,10 +19,10 @@ from sqlalchemy import (
     String,
     Table,
     Text,
-    create_engine,
     select,
     update,
 )
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .lib import load_media
@@ -30,6 +30,8 @@ from .lib import load_media
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Any
+
+    from sqlalchemy.ext.asyncio import AsyncEngine
 
 
 class Index(Model):
@@ -330,69 +332,65 @@ async def create_content_list(table_name: str) -> None:
     在 content.db 中创建一个名为 table_name 的表
     """
     db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
-    metadata = MetaData()
-    table = Table(
-        table_name,
-        metadata,
-        Column(
-            "id",
-            Integer,
-            primary_key=True,
-            autoincrement=True
-        ),
-        Column(
-            "content",
-            Text,
-            nullable=False,
-        ),
-        Column(
-            "deleted",
-            Boolean,
-            default=False,
-        ),
-        Column(
-            "date_modified",
-            DateTime(timezone=True),
-            default=lambda: datetime.now(UTC),
-            onupdate=lambda: datetime.now(UTC)
-        ),
-        Column(
-            "date_create",
-            DateTime(timezone=True),
-            default=lambda: datetime.now(UTC)
-        ),
-    )
-    metadata.create_all(engine, tables=[table])
-    metadata.reflect(bind=engine)
-    if "content_version" not in metadata.tables:
-        create_version_table()
-    engine.dispose()
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    try:
+        metadata = MetaData()
+        table = Table(
+            table_name,
+            metadata,
+            Column(
+                "id",
+                Integer,
+                primary_key=True,
+                autoincrement=True
+            ),
+            Column(
+                "content",
+                Text,
+                nullable=False,
+            ),
+            Column(
+                "deleted",
+                Boolean,
+                default=False,
+            ),
+            Column(
+                "date_modified",
+                DateTime(timezone=True),
+                default=lambda: datetime.now(UTC),
+                onupdate=lambda: datetime.now(UTC)
+            ),
+            Column(
+                "date_create",
+                DateTime(timezone=True),
+                default=lambda: datetime.now(UTC)
+            ),
+        )
+        async with engine.begin() as conn:
+            await conn.run_sync(metadata.create_all, tables=[table])
 
-def create_version_table() -> None:
-    """
-    在 content.db 中创建一个记录数据库版本的表
-    """
-    version_num = 2
+        await create_version_table(engine)
+    finally:
+        await engine.dispose()
 
-    db_path = get_plugin_data_dir() / "content.db"
-    engine = create_engine(f"sqlite:///{db_path}")
+async def create_version_table(engine: AsyncEngine, version_num: int = 2) -> None:
+    """
+    在 content.db 中创建 content_version 表并插入初始版本号
+    """
     metadata = MetaData()
-    table = Table(
+    version_table = Table(
         "content_version",
         metadata,
-        Column(
-            "version_num",
-            Integer,
-            nullable=False
-        ),
+        Column("version_num", Integer, nullable=False),
     )
-    metadata.create_all(engine, tables=[table])
-    with engine.connect() as conn:
-        update = table.insert().values(version_num=version_num)
-        conn.execute(update)
-        conn.commit()
-    engine.dispose()
+
+    async with engine.begin() as conn:
+        await conn.run_sync(metadata.create_all, tables=[version_table])
+        # 检查是否已有数据
+        result = await conn.execute(version_table.select().limit(1))
+        if result.fetchone() is None:
+            insert_stmt = version_table.insert().values(version_num=version_num)
+            await conn.execute(insert_stmt)
 
 async def get_contents(
     session: async_scoped_session | AsyncSession,
