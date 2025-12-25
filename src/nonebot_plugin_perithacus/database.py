@@ -292,8 +292,8 @@ async def get_entry_by_id(
 
 async def get_cron_entries(session: AsyncSession) -> Sequence[Index]:
     select_stmt = select(Index).where(Index.cron.isnot(None)).where(~Index.deleted)
-    results = await session.execute(select_stmt)
-    return results.scalars().all()
+    result = await session.execute(select_stmt)
+    return result.scalars().all()
 
 class Content(Model):
     id: Mapped[int] = mapped_column(
@@ -418,7 +418,7 @@ async def get_all_contents(
     session: async_scoped_session,
 ) -> Sequence[Content]:
     """
-    返回 {entry_id} 词条中的所有 content
+    返回数据库中的所有 content
     包含被标记为删除的 content
     """
     select_stmt = select(Content)
