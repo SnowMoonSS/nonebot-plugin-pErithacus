@@ -5,6 +5,7 @@ from datetime import timezone as tz
 import sqlalchemy as sa
 from nonebot import logger
 from nonebot_plugin_localstore import get_plugin_data_dir
+from nonebot_plugin_orm import get_session
 from sqlalchemy import (
     Boolean,
     Column,
@@ -226,19 +227,20 @@ async def upgrade_content_db_2_to_3(engine: AsyncEngine) -> bool:
                 result = await session.execute(select(old_table))
                 rows = result.fetchall()
 
-                for row in rows:
-                    # ⚠️ 直接使用原始值，不做任何 parse 或 default
-                    new_content = Content(
-                        entry_id=entry_id,
-                        content=row.content,
-                        deleted=row.deleted,
-                        date_modified=row.date_modified,
-                        date_create=row.date_create,
-                    )
-                    session.add(new_content)
+                async with get_session() as content_session:
+                    for row in rows:
+                        # ⚠️ 直接使用原始值，不做任何 parse 或 default
+                        new_content = Content(
+                            entry_id=entry_id,
+                            content=row.content,
+                            deleted=row.deleted,
+                            date_modified=row.date_modified,
+                            date_create=row.date_create,
+                        )
+                        content_session.add(new_content)
 
-                await session.commit()
-                logger.info(f"已迁移 {len(rows)} 条记录 from {table_name}")
+                    await content_session.commit()
+                    logger.info(f"已迁移 {len(rows)} 条记录 from {table_name}")
 
             # 更新 version_num 为 3
             version_table = Table(
