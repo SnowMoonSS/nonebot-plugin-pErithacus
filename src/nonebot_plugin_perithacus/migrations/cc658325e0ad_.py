@@ -11,6 +11,7 @@ from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import table, column, func, text
 
 
 revision: str = 'cc658325e0ad'
@@ -29,14 +30,18 @@ def upgrade(name: str = "") -> None:
         batch_op.add_column(sa.Column('date_modified', sa.DateTime(timezone=True), nullable=True, comment='词条编辑时间戳'))
         batch_op.add_column(sa.Column('date_create', sa.DateTime(timezone=True), nullable=True, comment='词条创建时间戳'))
 
-    op.execute("""
-        UPDATE nonebot_plugin_perithacus_index 
-        SET 
-            match_method = matchMethod,
-            is_random = isRandom,
-            date_modified = strftime('%Y-%m-%d %H:%M:%f', dateModified, '-8 hours'),
-            date_create = strftime('%Y-%m-%d %H:%M:%f', dateCreate, '-8 hours')'
-    """)
+    t = table('nonebot_plugin_perithacus_index',
+            column('match_method'), column('is_random'),
+            column('date_modified'), column('date_create'))
+
+    op.execute(
+        t.update().values(
+            match_method=text('matchMethod'),
+            is_random=text('isRandom'),
+            date_modified=func.strftime('%Y-%m-%d %H:%M:%f', text('dateModified'), '-8 hours'),
+            date_create=func.strftime('%Y-%m-%d %H:%M:%f', text('dateCreate'), '-8 hours')
+        )
+    )
 
     with op.batch_alter_table('nonebot_plugin_perithacus_index', schema=None) as batch_op:
         batch_op.drop_column('dateModified')
@@ -65,6 +70,19 @@ def downgrade(name: str = "") -> None:
             dateCreate = datetime(substr(date_create, 1, 19), '+8 hours'),
             dateModified = datetime(substr(date_modified, 1, 19), '+8 hours')
     """)
+
+    t = table('nonebot_plugin_perithacus_index',
+            column('matchMethod'), column('isRandom'),
+            column('dateModified'), column('dateCreate'))
+
+    op.execute(
+        t.update().values(
+            matchMethod=text('match_method'),
+            isRandom=text('is_random'),
+            dateModified=func.strftime('%Y-%m-%d %H:%M:%f', text('date_modified'), '+8 hours'),
+            dateCreate=func.strftime('%Y-%m-%d %H:%M:%f', text('date_create'), '+8 hours')
+        )
+    )
 
     with op.batch_alter_table('nonebot_plugin_perithacus_index', schema=None) as batch_op:
         batch_op.drop_column('date_create')
