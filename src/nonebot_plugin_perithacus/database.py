@@ -498,7 +498,6 @@ async def delete_content(session: async_scoped_session, content_id: int) -> None
         .values(deleted=True, date_modified=datetime.now(UTC))
     )
     await session.execute(update_stmt)
-    await session.commit()
 
 async def replace_content(
     session: async_scoped_session,
@@ -522,10 +521,8 @@ async def replace_content(
     await delete_content(session, content_id)
 
     logger.debug(f"添加新内容：{content}")
-    new_content = Content(
+    Content(
         entry_id=entry_id,
         content=content
     )
-    session.add(new_content)
-    await session.commit()
     return True

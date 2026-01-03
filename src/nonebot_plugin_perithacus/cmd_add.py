@@ -82,12 +82,11 @@ async def _(  # noqa: PLR0913
                 existing_entry,
                 **update_kwargs
             )
+            entry_id = existing_entry.id
             await session.commit()
 
             uni_keyword = load_media(keyword_text)
-            await pe.finish(
-                f"词条 {existing_entry.id} : " + uni_keyword + " 加入了新的内容"
-            )
+            await pe.finish(f"词条 {entry_id} : " + uni_keyword + " 加入了新的内容")
         else:
             uni_keyword = load_media(keyword_text)
             await pe.finish(
@@ -120,10 +119,9 @@ async def _(  # noqa: PLR0913
         if cron_expressions:
             add_cron_job(new_entry.id, cron_expressions)
 
+        entry_id = new_entry.id
         await session.commit()
 
         uni_keyword = load_media(keyword_text)
-        await pe.finish(
-            f"词条 {new_entry.id} : " + uni_keyword + " 已创建并加入了新的内容"
-        )
+        await pe.finish(f"词条 {entry_id} : " + uni_keyword + " 已创建并加入了新的内容")
 
