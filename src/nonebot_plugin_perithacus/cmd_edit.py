@@ -65,55 +65,54 @@ async def _(  # noqa: PLR0913
     alias_text = await save_media(alias.result)
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
-    if existing_entry:
-        update_kwargs = {}
-        update_kwargs = handle_match_method(update_kwargs, match_method)
-        update_kwargs = handle_is_random(update_kwargs, is_random)
-        update_kwargs = await handle_cron(update_kwargs, existing_entry, cron)
-        update_kwargs = handle_scope(
-            update_kwargs,
-            scope_list,
-            existing_entry,
-            scope
-        )
-        update_kwargs = handle_reg(update_kwargs, reg)
-        update_kwargs = handle_alias(
-            update_kwargs,
-            alias_text,
-            existing_entry,
-            alias
-        )
-
-        existing_entry = await update_entry(
-            session,
-            existing_entry,
-            **update_kwargs
-        )
-
-        uni_keyword = load_media(existing_entry.keyword)
-        msg = UniMessage(
-            f"词条 {existing_entry.id} : " + uni_keyword + " 修改成功！"
-        )
-
-        if delete_id.available:
-            # 删除指定的内容
-            result = await delete_content(session, delete_id.result)
-            if result:
-                msg.append("\n删除内容成功！")
-            else:
-                msg.append("\n删除内容失败，请检查内容编号是否正确")
-
-        if replace_id.available and content.available:
-            if await replace_content(
-                session,
-                existing_entry.id,
-                replace_id.result,
-                content_text
-            ):
-                msg.append("\n替换内容成功！")
-            else:
-                msg.append("\n替换内容失败，请检查内容编号是否正确")
-
-        await pe.finish(msg)
-    else:
+    if not existing_entry:
         await pe.finish("词条: " + UniMessage(keyword.result) + " 不存在")
+
+    update_kwargs = {}
+    update_kwargs = handle_match_method(update_kwargs, match_method)
+    update_kwargs = handle_is_random(update_kwargs, is_random)
+    update_kwargs = await handle_cron(update_kwargs, existing_entry, cron)
+    update_kwargs = handle_scope(
+        update_kwargs,
+        scope_list,
+        existing_entry,
+        scope
+    )
+    update_kwargs = handle_reg(update_kwargs, reg)
+    update_kwargs = handle_alias(
+        update_kwargs,
+        alias_text,
+        existing_entry,
+        alias
+    )
+
+    existing_entry = await update_entry(
+        session,
+        existing_entry,
+        **update_kwargs
+    )
+
+    uni_keyword = load_media(existing_entry.keyword)
+    msg = UniMessage(f"词条 {existing_entry.id} : " + uni_keyword + " 修改成功！")
+
+    if delete_id.available:
+        # 删除指定的内容
+        result = await delete_content(session, delete_id.result)
+        if result:
+            msg.append("\n删除内容成功！")
+        else:
+            msg.append("\n删除内容失败，请检查内容编号是否正确")
+
+    if replace_id.available and content.available:
+        if await replace_content(
+            session,
+            existing_entry.id,
+            replace_id.result,
+            content_text
+        ):
+            msg.append("\n替换内容成功！")
+        else:
+            msg.append("\n替换内容失败，请检查内容编号是否正确")
+
+    await session.commit()
+    await pe.finish(msg)
