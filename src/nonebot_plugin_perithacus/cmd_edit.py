@@ -89,6 +89,7 @@ async def _(  # noqa: PLR0913
             existing_entry,
             **update_kwargs
         )
+        await session.commit()
 
         uni_keyword = load_media(existing_entry.keyword)
         msg = UniMessage(

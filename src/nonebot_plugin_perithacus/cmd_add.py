@@ -82,6 +82,7 @@ async def _(  # noqa: PLR0913
                 existing_entry,
                 **update_kwargs
             )
+            await session.commit()
 
             uni_keyword = load_media(keyword_text)
             await pe.finish(
@@ -111,9 +112,15 @@ async def _(  # noqa: PLR0913
                 if (alias.available and alias_text)
                 else None)
         )
+
+        await session.flush()
+
         await add_content(session, new_entry.id, content_text)
+
         if cron_expressions:
             add_cron_job(new_entry.id, cron_expressions)
+
+        await session.commit()
 
         uni_keyword = load_media(keyword_text)
         await pe.finish(

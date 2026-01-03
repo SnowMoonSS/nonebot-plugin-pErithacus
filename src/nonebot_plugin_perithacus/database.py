@@ -229,7 +229,10 @@ async def get_entries(
     return matches
 
 async def update_entry(
-    session: async_scoped_session,
+    # AI 寻思这个未被使用的参数不应该删除，所以保留
+    # Note: session is required to ensure `entry` is in the correct persistence context,
+    # even though we don't explicitly call session methods here.
+    session: async_scoped_session,  # noqa: ARG001
 
     entry: Index,
     **kwargs: Any
@@ -238,29 +241,23 @@ async def update_entry(
     更新 entry。
     """
 
-    if "match_method" in kwargs:
-        entry.match_method = kwargs["match_method"]
+    fields_to_update = {
+        "match_method",
+        "is_random",
+        "cron",
+        "scope",
+        "reg",
+        "deleted",
+        "alias",
+        "date_modified",
+    }
 
-    if "is_random" in kwargs:
-        entry.is_random = kwargs["is_random"]
-
-    if "cron" in kwargs:
-        entry.cron = kwargs["cron"]
-
-    if "scope" in kwargs:
-        entry.scope = kwargs["scope"]
-
-    if "reg" in kwargs:
-        entry.reg = kwargs["reg"]
-
-    if "alias" in kwargs:
-        entry.alias = kwargs["alias"]
+    for field in fields_to_update:
+        if field in kwargs:
+            setattr(entry, field, kwargs[field])
 
     entry.date_modified = datetime.now(UTC)
 
-    session.add(entry)
-    await session.commit()
-    await session.refresh(entry)
     return entry
 
 async def add_entry(
@@ -276,8 +273,6 @@ async def add_entry(
         **kwargs
     )
     session.add(new_entry)
-    await session.commit()
-    await session.refresh(new_entry)
     logger.debug(f"添加新词条 {new_entry.id} : {new_entry.keyword} 到 Index")
     return new_entry
 
@@ -462,7 +457,6 @@ async def restore_deleted_content(
         .values(deleted=False)
     )
     await session.execute(update_stmt)
-    await session.commit()
 
 async def add_content(
     session: async_scoped_session | AsyncSession,
@@ -492,7 +486,6 @@ async def add_content(
         date_create=date_create
     )
     session.add(new_content)
-    await session.commit()
     return True
 
 async def delete_content(session: async_scoped_session, content_id: int) -> None:
