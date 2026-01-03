@@ -60,7 +60,7 @@ async def _(
         await update_entry(
             session,
             entry,
-            scope = [],
+            scope = json.dumps([]),
             deleted = True,
             date_modified = datetime.now(UTC)
         )
