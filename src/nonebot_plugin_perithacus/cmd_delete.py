@@ -60,7 +60,7 @@ async def _(
         await update_entry(
             session,
             entry,
-            scope = None,
+            scope = [],
             deleted = True,
             date_modified = datetime.now(UTC)
         )
