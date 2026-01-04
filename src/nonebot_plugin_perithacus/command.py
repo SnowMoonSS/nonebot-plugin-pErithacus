@@ -110,4 +110,4 @@ async def handle_main() -> None:
     await pe.finish("发送“pe --help”查看帮助")
 
 
-on_every_message = on_message()
+on_every_message = on_message(block=False)
