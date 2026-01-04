@@ -124,4 +124,3 @@ async def _(  # noqa: PLR0913
 
         uni_keyword = load_media(keyword_text)
         await pe.finish(f"词条 {entry_id} : " + uni_keyword + " 已创建并加入了新的内容")
-
