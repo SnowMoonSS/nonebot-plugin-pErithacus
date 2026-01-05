@@ -346,6 +346,3 @@ pe edit 笑话 -C 2-5,7
 - Win 7 (not roaming): C:\Users\<username>\AppData\Local\nonebot2
 
 可在`.env`文件中添加`LOCALSTORE_USE_CWD = True`使其保存在当前工作目录下
-
-## 已知的问题
-- 没有删除别名的方法
