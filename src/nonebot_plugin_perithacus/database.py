@@ -25,7 +25,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .lib import load_media
+from .lib import get_num_list, load_media
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -543,6 +543,14 @@ async def delete_content(session: async_scoped_session, content_id: int) -> None
         .values(deleted=True, date_modified=datetime.now(UTC))
     )
     await session.execute(update_stmt)
+
+async def delete_contents(session: async_scoped_session, content_list: str) -> None:
+    """
+    将 content_list 中的所有内容标记为已删除
+    """
+    content_ids = await get_num_list(content_list)
+    for content_id in content_ids:
+        await delete_content(session, content_id)
 
 async def replace_content(
     session: async_scoped_session,

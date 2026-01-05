@@ -4,7 +4,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import (
-    delete_content,
+    delete_contents,
     get_entry,
     replace_content,
     update_entry,
@@ -12,17 +12,13 @@ from .database import (
 from .handle_args import (
     handle_alias,
     handle_cron,
+    handle_del_alias,
     handle_is_random,
     handle_match_method,
     handle_reg,
     handle_scope,
 )
-from .lib import (
-    get_scope,
-    get_source,
-    load_media,
-    save_media,
-)
+from .lib import get_scope, get_source, load_media, save_media
 
 
 @pe.assign("edit")
@@ -37,7 +33,8 @@ async def _(  # noqa: PLR0913
     scope: Match[str] = AlconnaMatch("scope"),
     reg: Match[str] = AlconnaMatch("reg"),
     alias: Match[UniMessage] = AlconnaMatch("alias"),
-    delete_id: Match[int] = AlconnaMatch("delete_id"),
+    del_alias_id: Match[str] = AlconnaMatch("del_alias_id"),
+    delete_id: Match[str] = AlconnaMatch("delete_id"),
     replace_id: Match[int] = AlconnaMatch("replace_id"),
     content: Match[UniMessage] = AlconnaMatch("content"),
 ):
@@ -52,6 +49,7 @@ async def _(  # noqa: PLR0913
         or scope.available
         or reg.available
         or alias.available
+        or del_alias_id.available
         or delete_id.available
         or replace_id.available
     ):
@@ -78,6 +76,7 @@ async def _(  # noqa: PLR0913
         scope
     )
     update_kwargs = handle_reg(update_kwargs, reg)
+    update_kwargs = await handle_del_alias(update_kwargs, del_alias_id, existing_entry)
     update_kwargs = handle_alias(
         update_kwargs,
         alias_text,
@@ -96,7 +95,7 @@ async def _(  # noqa: PLR0913
 
     if delete_id.available:
         # 删除指定的内容
-        result = await delete_content(session, delete_id.result)
+        result = await delete_contents(session, delete_id.result)
         if result:
             msg.append("\n删除内容成功！")
         else:

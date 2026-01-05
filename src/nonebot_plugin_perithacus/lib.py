@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -219,3 +220,23 @@ async def get_scope(scope: Match, this_source: str) -> list[str]:
             await pe.finish("scope参数格式错误，应以 'g' 或 'u' 开头")
 
     return scope_list
+
+async def get_num_list(num_str: str) -> list[int]:
+    """
+    将类似 "1,2,5-7" 的字符串转换为整数列表 [1,2,5,6,7]
+    """
+    pattern = r"^(?:(?:\d+)|\d+-\d+)(?:,(?:(?:\d+)|\d+-\d+))*$"
+    if not bool(re.fullmatch(pattern, num_str)):
+        await pe.finish("参数格式错误")
+
+    num_list = []
+    parts = num_str.split(",")
+    for part in parts:
+        if "-" in part:
+            start, end = part.split("-")
+            if start >= end:
+                await pe.finish("参数格式错误")
+            num_list.extend(range(int(start), int(end) + 1))
+        else:
+            num_list.append(int(part))
+    return num_list

@@ -29,40 +29,27 @@ async def _(
             date_modified = entry.date_modified.replace(tzinfo=UTC)
             date_modified = entry.date_modified.astimezone(beijing_tz)
 
-            aliases = UniMessage()
-            if entry.alias:
-                aliases_json = json.loads(entry.alias)
-                for alias in aliases_json:
-                    aliases.append(load_media(alias))
+            msg = (
+                f"编号：{entry.id}\n" +
+                "词条名：" + keyword + "\n" +
+                f"匹配方式：{entry.match_method}\n" +
+                f"随机：{entry.is_random}\n" +
+                f"定时：{entry.cron}\n" +
+                f"作用域：{entry.scope}\n" +
+                f"正则表达式：{entry.reg}\n" +
+                f"来源：{entry.source}\n" +
+                f"删除：{entry.deleted}\n" +
+                f"创建时间：{date_create}\n" +
+                f"修改时间：{date_modified}\n" +
+                "别名：\n"
+            )
+            aliases_msg = UniMessage()
+            aliases_json = json.loads(entry.alias) if entry.alias else []
+            for idx, alias in enumerate(aliases_json, start=1):
+                alias_loaded = load_media(alias)
+                aliases_msg += UniMessage(f"{idx}. {alias_loaded}\n")
 
-                await pe.finish(f"编号：{entry.id}\n" +
-                                 "词条名：" + keyword + "\n" +
-                                f"匹配方式：{entry.match_method}\n" +
-                                f"随机：{entry.is_random}\n" +
-                                f"定时：{entry.cron}\n" +
-                                f"作用域：{entry.scope}\n" +
-                                f"正则表达式：{entry.reg}\n" +
-                                f"来源：{entry.source}\n" +
-                                f"删除：{entry.deleted}\n" +
-                                f"创建时间：{date_create}\n" +
-                                f"修改时间：{date_modified}\n" +
-                                 "别名：" + aliases
-                                )
-            else:
-                aliases = None
-                await pe.finish(f"编号：{entry.id}\n" +
-                                 "词条名：" + keyword + "\n" +
-                                f"匹配方式：{entry.match_method}\n" +
-                                f"随机：{entry.is_random}\n" +
-                                f"定时：{entry.cron}\n" +
-                                f"作用域：{entry.scope}\n" +
-                                f"正则表达式：{entry.reg}\n" +
-                                f"来源：{entry.source}\n" +
-                                f"删除：{entry.deleted}\n" +
-                                f"创建时间：{date_create}\n" +
-                                f"修改时间：{date_modified}\n" +
-                                f"别名：{aliases}"
-                                )
+            await pe.finish(msg + aliases_msg)
         elif not force.result.value and entry.deleted:
             await pe.finish(
                 "请输入有效的词条 ID 。使用 search 或 list 命令查看词条列表。"
