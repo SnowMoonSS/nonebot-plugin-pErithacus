@@ -22,6 +22,7 @@ from sqlalchemy import (
     select,
     update,
 )
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -533,7 +534,7 @@ async def add_content(
     session.add(new_content)
     return True
 
-async def delete_content(session: async_scoped_session, content_id: int) -> None:
+async def delete_content(session: async_scoped_session, content_id: int) -> bool:
     """
     将 content_id 标记为已删除
     """
@@ -542,15 +543,36 @@ async def delete_content(session: async_scoped_session, content_id: int) -> None
         .where(Content.id == content_id)
         .values(deleted=True, date_modified=datetime.now(UTC))
     )
-    await session.execute(update_stmt)
+    try:
+        await session.execute(update_stmt)
+        return True  # noqa: TRY300
+    except SQLAlchemyError as e:
+        logger.error(f"删除内容 {content_id} 失败: {e}")
+        return False
 
-async def delete_contents(session: async_scoped_session, content_list: str) -> None:
+async def delete_contents(
+    session: async_scoped_session,
+    content_list: str
+) -> tuple[bool, list[int]]:
     """
     将 content_list 中的所有内容标记为已删除
+
+    返回:
+    tuple[bool, list[int]]:
+        - 如果全部成功，返回 (True, [])
+        - 如果有失败，返回 (False, [failed_id1, failed_id2, ...])
     """
     content_ids = await get_num_list(content_list)
+    failed_ids: list[int] = []
+
     for content_id in content_ids:
-        await delete_content(session, content_id)
+        success = await delete_content(session, content_id)
+        if not success:
+            failed_ids.append(content_id)
+
+    if failed_ids:
+        return False, failed_ids
+    return True, []
 
 async def replace_content(
     session: async_scoped_session,
