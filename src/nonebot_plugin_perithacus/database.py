@@ -596,8 +596,5 @@ async def replace_content(
     await delete_content(session, content_id)
 
     logger.debug(f"添加新内容：{content}")
-    Content(
-        entry_id=entry_id,
-        content=content
-    )
+    await add_content(session, entry_id, content)
     return True
