@@ -25,7 +25,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .lib import load_media
+from .lib import get_num_list, load_media
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -114,60 +114,105 @@ async def get_all_entries(
     result = await session.execute(select_stmt)
     return result.scalars().all()
 
+def _is_in_scope(entry: Index, scope_list: list[str]) -> bool:
+    """判断 entry 是否在指定的作用域内"""
+    try:
+        scope_list_from_db = json.loads(entry.scope) if entry.scope else []
+        return any(item in scope_list_from_db for item in scope_list)
+    except json.JSONDecodeError:
+        return False
+
+def _is_exact_match(entry: Index, keyword: str) -> bool:
+    """判断是否满足精准匹配条件（keyword 或 alias）"""
+    if not (entry.match_method == "精准" or entry.reg is not None):
+        return False
+
+    # 直接 keyword 匹配
+    if entry.keyword == keyword:
+        return True
+
+    # alias 匹配
+    if entry.alias:
+        try:
+            alias_list = json.loads(entry.alias)
+            return keyword in alias_list  # noqa: TRY300
+        except json.JSONDecodeError:
+            pass
+    return False
+
+def _is_fuzzy_match(entry: Index, keyword_msg: UniMessage) -> bool:
+    """判断是否满足模糊匹配条件（仅当 match_method='模糊' 且无 reg）"""
+    if not (entry.match_method == "模糊" and entry.reg is None):
+        return False
+
+    if not UniMessage(keyword_msg).only(AlconnaText):
+        return False
+
+    key = keyword_msg.extract_plain_text()
+    entry_key = load_media(entry.keyword).extract_plain_text()
+    if key in entry_key:
+        return True
+
+    if entry.alias:
+        try:
+            alias_list = json.loads(entry.alias)
+            for alias in alias_list:
+                entry_alias = load_media(alias).extract_plain_text()
+                if key in entry_alias:
+                    return True
+        except json.JSONDecodeError:
+            pass
+    return False
+
+def _is_regex_match(entry: Index, keyword_msg: UniMessage) -> bool:
+    """判断是否满足正则匹配条件"""
+    if not entry.reg:
+        return False
+    if not UniMessage(keyword_msg).only(AlconnaText):
+        return False
+
+    key = keyword_msg.extract_plain_text()
+    return bool(re.match(entry.reg, key))
+
 async def matching(
     entries: Sequence[Index],
     keyword: str,
     scope_list: list[str],
 ) -> Sequence[Index]:
     """
-    返回在 scope_list 中且与 Index 中的 keyword 或 reg 或 alias 匹配的词条。
+    返回在 scope_list 中且与 Index 中的 keyword、reg 或 alias 匹配的词条。
     - entries: Index 对象列表
     - keyword: 经由 save_media 或者 convert_media 转换后的 JSON 字符串
     - scope_list: 列表
     """
     matches = []
+    keyword_msg = load_media(keyword)
+
     for entry in entries:
-        # scope 过滤：若 entry.scope 无效或不包含指定 scope，则跳过
-        try:
-            scope_list_from_db = json.loads(entry.scope) if entry.scope else []
-            if not any(item in scope_list_from_db for item in scope_list):
-                #logger.debug(f"跳过词条 {entry.id}，不在作用域 {scope_list} 中")
-                continue
-        except json.JSONDecodeError:
+        # 1. 作用域过滤
+        if not _is_in_scope(entry, scope_list):
             continue
 
-        # 直接匹配 keyword
-        if entry.keyword == keyword and entry.match_method == "精准":
+        # 2. 精准匹配
+        if _is_exact_match(entry, keyword):
             matches.append(entry)
             logger.debug(f"匹配词条 {entry.id}, 精准匹配")
             continue
-        # 模糊匹配 keyword
-        keyword_msg = load_media(keyword)
-        if (
-            entry.match_method == "模糊"
-            and UniMessage(keyword_msg).only(AlconnaText)
-            and entry.reg is None
-        ):
-            key = keyword_msg.extract_plain_text()
-            entry_key = load_media(entry.keyword).extract_plain_text()
-            if key in entry_key:
-                matches.append(entry)
-                logger.debug(f"匹配词条 {entry.id}，模糊匹配")
-                continue
-        # 检查正则表达式
-        elif entry.reg and UniMessage(keyword_msg).only(AlconnaText):
-            key = keyword_msg.extract_plain_text()
-            if re.match(entry.reg, key):
-                matches.append(entry)
-                logger.debug(f"匹配词条 {entry.id}，正则匹配 {entry.reg}")
-                continue
-        # 检查 alias（JSON）
-        elif entry.alias and keyword in json.loads(entry.alias):
+
+        # 3. 模糊匹配
+        if _is_fuzzy_match(entry, keyword_msg):
             matches.append(entry)
-            logger.debug(f"匹配词条 {entry.id}，别名匹配 {entry.alias}")
+            logger.debug(f"匹配词条 {entry.id}，模糊匹配")
             continue
-        #else:
-            #logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
+
+        # 4. 正则匹配
+        if _is_regex_match(entry, keyword_msg):
+            matches.append(entry)
+            logger.debug(f"匹配词条 {entry.id}，正则匹配 {entry.reg}")
+            continue
+
+        # 可选：记录未匹配日志（取消注释即可）
+        # logger.debug(f"词条 {entry.id} 在作用域中，但未匹配")
 
     return matches
 
@@ -498,6 +543,14 @@ async def delete_content(session: async_scoped_session, content_id: int) -> None
         .values(deleted=True, date_modified=datetime.now(UTC))
     )
     await session.execute(update_stmt)
+
+async def delete_contents(session: async_scoped_session, content_list: str) -> None:
+    """
+    将 content_list 中的所有内容标记为已删除
+    """
+    content_ids = await get_num_list(content_list)
+    for content_id in content_ids:
+        await delete_content(session, content_id)
 
 async def replace_content(
     session: async_scoped_session,

@@ -4,7 +4,7 @@ import json
 from typing import TYPE_CHECKING
 
 from .apscheduler import add_cron_job, remove_cron_job
-from .lib import get_cron
+from .lib import get_cron, get_num_list
 
 if TYPE_CHECKING:
     from nonebot_plugin_alconna import Match
@@ -42,6 +42,9 @@ def handle_scope(
     entry: Index,
     scope: Match
 ) -> dict:
+    """
+    合并新旧 scope 列表，避免重复，并更新到 update_kwargs
+    """
     if scope.available:
         try:
             scope_list_from_db = json.loads(entry.scope) if entry.scope else []
@@ -70,4 +73,25 @@ def handle_alias(
 def handle_reg(update_kwargs: dict, reg: Match) -> dict:
     if reg.available:
         update_kwargs["reg"] = reg.result
+    return update_kwargs
+
+async def handle_del_alias(
+    update_kwargs: dict,
+    del_alias_id: Match,
+    entry: Index
+) -> dict:
+    if del_alias_id.available:
+        try:
+            alias_list = json.loads(entry.alias) if entry.alias else []
+        except json.JSONDecodeError:
+            alias_list = []
+        ids_to_delete = await get_num_list(del_alias_id.result)
+        # 过滤掉无效的序号
+        ids_to_delete = [i for i in ids_to_delete if 1 <= i <= len(alias_list)]
+        # 根据序号删除对应的别名，注意序号是从1开始的
+        alias_list = [
+            alias for idx, alias in enumerate(alias_list, start=1)
+            if idx not in ids_to_delete
+        ]
+        update_kwargs["alias"] = json.dumps(alias_list) if alias_list else None
     return update_kwargs

@@ -123,7 +123,7 @@ async def search_in_contents(
     for content in contents:
         if not content.deleted and key in content.content:
             if content.entry_id not in result_list:
-                if await check_is_deleted(session, content.entry_id, scope_list):
+                if not await check_is_deleted(session, content.entry_id, scope_list):
                     result_list.append(content.entry_id)
             else:
                 logger.debug(f"跳过词条 {content.entry_id}，该词条已存在搜索结果中")
@@ -137,17 +137,22 @@ async def check_is_deleted(
     entry_id: int,
     scope_list: list[str]
 ) -> bool:
+    """
+    检查词条是否已被删除。
+    已被删除返回True，否则返回False
+    若
+    """
     entry = await get_entry_by_id(session, entry_id)
-    if entry and entry.deleted:
+    if entry and not entry.deleted:
         try:
             scope_list_from_db = json.loads(entry.scope) if entry.scope else []
             if any(item in scope_list_from_db for item in scope_list):
                 logger.debug(f"词条 {entry_id}，在作用域 {scope_list} 中，加入搜索结果")
-                return True
+                return False
             #logger.debug(f"词条 {entry_id}，不在作用域 {scope_list} 中")
-            return False  # noqa: TRY300
+            return True  # noqa: TRY300
         except json.JSONDecodeError:
-            return False
+            return True
     else:
         logger.debug(f"跳过词条 {entry_id}，该词条已标记为删除")
-        return False
+        return True
