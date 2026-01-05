@@ -29,7 +29,7 @@ perithacus = Alconna(
         Option("-r|--random", Args["is_random#是否随机回复", bool], default=True),
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
-        Option("-R|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
+        Option("-g|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
         Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
         help_text="添加词条",
     ),
