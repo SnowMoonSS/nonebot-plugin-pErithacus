@@ -42,6 +42,9 @@ def handle_scope(
     entry: Index,
     scope: Match
 ) -> dict:
+    """
+    合并新旧 scope 列表，避免重复，并更新到 update_kwargs
+    """
     if scope.available:
         try:
             scope_list_from_db = json.loads(entry.scope) if entry.scope else []
