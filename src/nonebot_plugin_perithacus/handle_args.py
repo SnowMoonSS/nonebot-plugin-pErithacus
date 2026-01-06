@@ -4,6 +4,8 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from nonebot import logger
+
 from .apscheduler import add_cron_job, remove_cron_job
 from .lib import get_cron, get_num_list
 
@@ -52,9 +54,13 @@ def handle_scope(
             scope_list_from_db = json.loads(entry.scope) if entry.scope else []
         except json.JSONDecodeError:
             scope_list_from_db = []
-        if not any(item in scope_list_from_db for item in scope_list):
-            scope_list_from_db.extend(scope_list)
+        for item in scope_list:
+            if item not in scope_list_from_db:
+                scope_list_from_db.append(item)
         update_kwargs["scope"] = json.dumps(scope_list_from_db)
+        logger.debug(
+            f"输入的作用域与数据库中的记录合并但还没写入数据库: {scope_list_from_db}"
+        )
     return update_kwargs
 
 def handle_alias(
@@ -110,4 +116,3 @@ def handle_main_args(
     """
     从消息中提取 keyword 和 content 参数
     """
-
