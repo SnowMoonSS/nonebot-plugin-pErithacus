@@ -1,8 +1,14 @@
 import json
 
-#from nonebot import logger
-from nonebot.adapters import Bot, Event  # noqa: TC002
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, get_target
+from nonebot import logger
+from nonebot_plugin_alconna import (
+    AlconnaMatch,
+    Match,
+    MsgTarget,
+    UniMessage,
+    UniMsg,
+    get_target,
+)
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .apscheduler import add_cron_job
@@ -32,8 +38,8 @@ from .lib import (
 
 @pe.assign("add")
 async def _(  # noqa: PLR0913
-    event: Event,
-    bot: Bot,
+    target: MsgTarget,
+    uni_msg: UniMsg,
     session: async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
@@ -52,7 +58,7 @@ async def _(  # noqa: PLR0913
 
     keyword_text = await save_media(keyword.result)
     content_text = await save_media(content.result)
-    this_source = get_source(event)
+    this_source = get_source(target)
     cron_expressions = await get_cron(cron)
     scope_list = await get_scope(scope, this_source)
     alias_text = await save_media(alias.result)
@@ -100,7 +106,6 @@ async def _(  # noqa: PLR0913
                 reply_to=True
             )
     else:
-        target = get_target(event, bot)
         # 构建新词条对象，只在参数被提供时使用用户输入，否则使用数据库模型的默认值
         new_entry = await add_entry(
             session,

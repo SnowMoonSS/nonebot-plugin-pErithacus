@@ -1,5 +1,4 @@
-from nonebot.adapters import Event  # noqa: TC002
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_alconna import AlconnaMatch, Match, MsgTarget, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
@@ -24,7 +23,7 @@ from .lib import get_num_list, get_scope, get_source, load_media, save_media
 
 @pe.assign("edit")
 async def _(  # noqa: PLR0913
-    event: Event,
+    target: MsgTarget,
     session : async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
@@ -58,7 +57,7 @@ async def _(  # noqa: PLR0913
 
     keyword_text = await save_media(keyword.result)
     content_text = await save_media(content.result)
-    this_source = get_source(event)
+    this_source = get_source(target)
     scope_list = await get_scope(scope, this_source)
     alias_text = await save_media(alias.result)
 

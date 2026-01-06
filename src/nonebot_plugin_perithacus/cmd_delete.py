@@ -1,8 +1,7 @@
 import json
 from datetime import UTC, datetime
 
-from nonebot.adapters import Event  # noqa: TC002
-from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage
+from nonebot_plugin_alconna import AlconnaMatch, Match, MsgTarget, UniMessage
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .apscheduler import remove_cron_job
@@ -13,7 +12,7 @@ from .lib import convert_media, get_scope, get_source
 
 @pe.assign("del")
 async def _(
-    event: Event,
+    target: MsgTarget,
     session: async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
@@ -26,7 +25,7 @@ async def _(
 
     keyword_text = await convert_media(keyword.result)
     uni_keyword = UniMessage(keyword.result)
-    this_source = get_source(event)
+    this_source = get_source(target)
     scope_list = await get_scope(scope, this_source)
 
     entry = await get_entry(session, keyword_text, scope_list)

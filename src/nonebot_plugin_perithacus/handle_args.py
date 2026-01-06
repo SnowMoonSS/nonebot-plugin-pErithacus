@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .apscheduler import add_cron_job, remove_cron_job
 from .lib import get_cron, get_num_list
 
 if TYPE_CHECKING:
-    from nonebot_plugin_alconna import Match
+    from nonebot.adapters import Message
+    from nonebot_plugin_alconna import Match, UniMessage
 
     from .database import Index
 
@@ -95,3 +97,17 @@ async def handle_del_alias(
         ]
         update_kwargs["alias"] = json.dumps(alias_list) if alias_list else None
     return update_kwargs
+
+@dataclass
+class MainArgs:
+    keyword: UniMessage
+    content: UniMessage
+
+def handle_main_args(
+    msg: Message,
+    sub_command: str,
+) -> MainArgs:
+    """
+    从消息中提取 keyword 和 content 参数
+    """
+

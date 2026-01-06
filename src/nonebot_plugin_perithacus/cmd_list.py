@@ -1,9 +1,9 @@
 from loguru import logger
-from nonebot.adapters import Event  # noqa: TC002
 from nonebot_plugin_alconna import (
     AlconnaMatch,
     AlconnaQuery,
     Match,
+    MsgTarget,
     Query,
     UniMessage,
 )
@@ -16,7 +16,7 @@ from .lib import get_scope, get_source, load_media
 
 @pe.assign("list")
 async def _(  # noqa: PLR0913
-    event: Event,
+    target: MsgTarget,
     session: async_scoped_session,
 
     page: Match[int] = AlconnaMatch("page"),
@@ -34,7 +34,7 @@ async def _(  # noqa: PLR0913
 
     logger.debug(f"is_all: {is_all.result}")
 
-    this_source = get_source(event)
+    this_source = get_source(target)
     scope_list = await get_scope(scope, this_source)
 
     entries = await get_entries(
