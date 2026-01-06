@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -504,25 +505,35 @@ async def restore_deleted_content(
     )
     await session.execute(update_stmt)
 
+@dataclass
+class AddContentResult:
+    success: bool
+    content_id: int
+
 async def add_content(
     session: async_scoped_session | AsyncSession,
 
     entry_id: int,
     content: str,
-    date_modified: datetime = datetime.now(UTC),
-    date_create: datetime = datetime.now(UTC)
-) -> bool:
+    date_modified: datetime | None = None,
+    date_create: datetime | None = None
+) -> AddContentResult:
     """
     添加一条 content 。
     返回 True 表示添加成功，返回 False 表示内容已存在。
     """
+    if date_modified is None:
+        date_modified = datetime.now(UTC)
+    if date_create is None:
+        date_create = datetime.now(UTC)
+
     rows = await get_contents(session, entry_id)
     for row in rows:
         if compare_contents(row.content, content):
             if not row.deleted:
-                return False
+                return AddContentResult(success=False, content_id=row.id)
             await restore_deleted_content(session, row.id)
-            return True
+            return AddContentResult(success=True, content_id=row.id)
 
     logger.debug(f"添加内容 {content} 到 Content")
     new_content = Content(
@@ -532,7 +543,8 @@ async def add_content(
         date_create=date_create
     )
     session.add(new_content)
-    return True
+    await session.flush()
+    return AddContentResult(success=True, content_id=new_content.id)
 
 async def delete_content(session: async_scoped_session, content_id: int) -> bool:
     """
@@ -550,15 +562,20 @@ async def delete_content(session: async_scoped_session, content_id: int) -> bool
         logger.error(f"删除内容 {content_id} 失败: {e}")
         return False
 
+@dataclass
+class DeleteContentsResult:
+    success: bool
+    failed_ids: list[int]
+
 async def delete_contents(
     session: async_scoped_session,
     content_list: str
-) -> tuple[bool, list[int]]:
+) -> DeleteContentsResult:
     """
     将 content_list 中的所有内容标记为已删除
 
     返回:
-    tuple[bool, list[int]]:
+    DeleteContentsResult:
         - 如果全部成功，返回 (True, [])
         - 如果有失败，返回 (False, [failed_id1, failed_id2, ...])
     """
@@ -571,8 +588,8 @@ async def delete_contents(
             failed_ids.append(content_id)
 
     if failed_ids:
-        return False, failed_ids
-    return True, []
+        return DeleteContentsResult(success=False, failed_ids=failed_ids)
+    return DeleteContentsResult(success=True, failed_ids=[])
 
 async def replace_content(
     session: async_scoped_session,

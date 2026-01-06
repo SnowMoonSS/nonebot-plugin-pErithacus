@@ -1,5 +1,6 @@
 import json
 
+from nonebot import logger
 from nonebot.adapters import Bot, Event  # noqa: TC002
 from nonebot_plugin_alconna import AlconnaMatch, Match, UniMessage, get_target
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
@@ -49,6 +50,7 @@ async def _(  # noqa: PLR0913
     """
 
 
+    logger.debug(f"添加词条 {content.result}")
     keyword_text = await save_media(keyword.result)
     content_text = await save_media(content.result)
     this_source = get_source(event)
@@ -58,7 +60,8 @@ async def _(  # noqa: PLR0913
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
-        if await add_content(session, existing_entry.id, content_text):
+        add_content_result = await add_content(session, existing_entry.id, content_text)
+        if add_content_result.success:
             update_kwargs = {}
             update_kwargs = handle_match_method(update_kwargs, match_method)
             update_kwargs = handle_is_random(update_kwargs, is_random)
@@ -86,11 +89,15 @@ async def _(  # noqa: PLR0913
             await session.commit()
 
             uni_keyword = load_media(keyword_text)
-            await pe.finish(f"词条 {entry_id} : " + uni_keyword + " 加入了新的内容")
+            await pe.finish(
+                f"词条 {entry_id} : {uni_keyword} 加入了新的内容："
+                f"{add_content_result.content_id}"
+            )
         else:
             uni_keyword = load_media(keyword_text)
             await pe.finish(
-                f"词条 {existing_entry.id} : " + uni_keyword + " 已存在该内容",
+                f"词条 {existing_entry.id} : {uni_keyword} 已存在该内容："
+                f"{add_content_result.content_id}",
                 reply_to=True
             )
     else:
@@ -114,7 +121,7 @@ async def _(  # noqa: PLR0913
 
         await session.flush()
 
-        await add_content(session, new_entry.id, content_text)
+        add_content_result = await add_content(session, new_entry.id, content_text)
 
         if cron_expressions:
             add_cron_job(new_entry.id, cron_expressions)
@@ -123,4 +130,7 @@ async def _(  # noqa: PLR0913
         await session.commit()
 
         uni_keyword = load_media(keyword_text)
-        await pe.finish(f"词条 {entry_id} : " + uni_keyword + " 已创建并加入了新的内容")
+        await pe.finish(
+            f"词条 {entry_id} : {uni_keyword} 已创建并加入了新的内容："
+            f"{add_content_result.content_id}"
+        )

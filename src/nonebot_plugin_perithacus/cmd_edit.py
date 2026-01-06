@@ -101,11 +101,11 @@ async def _(  # noqa: PLR0913
                 f"编号 {invalid_ids} 的内容不存在于 {uni_keyword} 中，请检查后重试"
             )
         # 删除指定的内容
-        result, failed_ids = await delete_contents(session, del_content_id.result)
-        if result:
+        result = await delete_contents(session, del_content_id.result)
+        if result.success:
             msg.append("删除内容成功！\n")
         else:
-            msg.append(f"删除内容失败，失败的内容编号有：{failed_ids}，请检查内容编号是否正确\n")
+            msg.append(f"删除内容失败，失败的内容编号有：{result.failed_ids}，请检查内容编号是否正确\n")
 
     if replace_id.available and content.available:
         existing_content_ids = [
