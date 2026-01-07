@@ -97,7 +97,9 @@ async def _(  # noqa: PLR0913
         invalid_ids = [cid for cid in content_ids if cid not in existing_content_ids]
         if invalid_ids:
             await pe.finish(
-                f"编号 {invalid_ids} 的内容不存在于 {uni_keyword} 中，请检查后重试"
+                f"编号 {invalid_ids} 的内容不存在于 "
+                + uni_keyword
+                + " 中，请检查后重试"
             )
         # 删除指定的内容
         result = await delete_contents(session, del_content_id.result)
@@ -112,7 +114,7 @@ async def _(  # noqa: PLR0913
         ]
         if replace_id.result not in existing_content_ids:
             await pe.finish(
-                f"内容编号 {replace_id.result} 不存在于词条 {uni_keyword} 中，"
+                f"内容编号 {replace_id.result} 不存在于词条 " + uni_keyword + " 中，"
                 "请检查后重试"
             )
         if await replace_content(
