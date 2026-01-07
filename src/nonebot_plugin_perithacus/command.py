@@ -16,7 +16,7 @@ perithacus = Alconna(
     "perithacus",
     Subcommand(
         "add|添加",
-        Args["keyword#词条名", str]["content#回复内容", MultiVar(Any)],
+        Args["keyword#词条名", Any]["content#回复内容", MultiVar(Any)],
         Option(
             "-m|--match",
             Args["match_method#匹配方式（精准/模糊）", "精准|模糊"],

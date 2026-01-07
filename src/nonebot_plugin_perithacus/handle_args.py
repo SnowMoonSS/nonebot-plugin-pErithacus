@@ -110,9 +110,10 @@ class MainArgs:
     content: UniMessage
 
 def handle_main_args(
-    msg: Message,
+    msg: UniMessage,
     sub_command: str,
 ) -> MainArgs:
     """
     从消息中提取 keyword 和 content 参数
     """
+    msg_text = msg.dump(json=True)
