@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from nonebot import logger
+from nonebot_plugin_alconna import Arparma, UniMessage
 
 from .apscheduler import add_cron_job, remove_cron_job
 from .lib import get_cron, get_num_list
 
 if TYPE_CHECKING:
-    from nonebot.adapters import Message
-    from nonebot_plugin_alconna import Match, UniMessage
+    from nonebot_plugin_alconna import Match
 
     from .database import Index
 
@@ -109,11 +110,32 @@ class MainArgs:
     keyword: UniMessage
     content: UniMessage
 
-def handle_main_args(
+async def handle_main_args(
     msg: UniMessage,
     sub_command: str,
-) -> MainArgs:
+) -> MainArgs | None:
     """
     从消息中提取 keyword 和 content 参数
     """
-    msg_text = msg.dump(json=True)
+    removed_prefix_msg = msg.removeprefix(f"pe {sub_command} ")
+    onebot_v11_msg = await removed_prefix_msg.export(adapter="OneBot V11")
+
+    options_r = r"\s(?:-|--)(?:m|match|r|random|c|cron|s|scope|g|reg|a|alias)\s+\S+(?=$|\s)"
+    matched_options = re.findall(options_r, str(onebot_v11_msg))
+    for option in matched_options:
+        removed_prefix_msg = removed_prefix_msg.replace(option, "")
+    clean_msg = removed_prefix_msg
+    logger.debug(f"去除选项后的消息: {clean_msg}")
+    msg_text = clean_msg.dump(json=True)
+    logger.debug(f"需要处理的消息: {msg_text}")
+
+    onebot_v11_msg = re.sub(options_r, "", str(onebot_v11_msg)).strip()
+    main_args_r = r'^(?:"([^"]+)"|(\S+))\s+(?:"([^"]+)"|(.*))$'
+    match = re.match(main_args_r, onebot_v11_msg)
+    if not match:
+        return None
+    keyword = match.group(1) or match.group(2)
+    content = match.group(3) or match.group(4)
+    uni_keyword = UniMessage(keyword)
+    uni_content = UniMessage(content)
+    return MainArgs(uni_keyword, uni_content)

@@ -22,6 +22,7 @@ from .handle_args import (
     handle_alias,
     handle_cron,
     handle_is_random,
+    handle_main_args,
     handle_match_method,
     handle_reg,
     handle_scope,
@@ -54,7 +55,7 @@ async def _(  # noqa: PLR0913
     添加词条
     """
 
-
+    await handle_main_args(uni_msg, "add")
     keyword_text = await save_media(keyword.result)
     content_text = await save_media(content.result)
     this_source = get_source(target)
@@ -94,13 +95,13 @@ async def _(  # noqa: PLR0913
 
             uni_keyword = load_media(keyword_text)
             await pe.finish(
-                f"词条 {entry_id} : {uni_keyword} 加入了新的内容："
+                f"词条 {entry_id} : " + uni_keyword + " 加入了新的内容："
                 f"{add_content_result.content_id}"
             )
         else:
             uni_keyword = load_media(keyword_text)
             await pe.finish(
-                f"词条 {existing_entry.id} : {uni_keyword} 已存在该内容："
+                f"词条 {existing_entry.id} : " + uni_keyword + " 已存在该内容："
                 f"{add_content_result.content_id}",
                 reply_to=True
             )
@@ -134,6 +135,6 @@ async def _(  # noqa: PLR0913
 
         uni_keyword = load_media(keyword_text)
         await pe.finish(
-            f"词条 {entry_id} : {uni_keyword} 已创建并加入了新的内容："
+            f"词条 {entry_id} : " + uni_keyword + " 已创建并加入了新的内容："
             f"{add_content_result.content_id}"
         )
