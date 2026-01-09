@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import codecs
 import json
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from nonebot import logger
-from nonebot_plugin_alconna import Arparma, UniMessage
+from nonebot_plugin_alconna import Text, UniMessage
 
 from .apscheduler import add_cron_job, remove_cron_job
 from .lib import get_cron, get_num_list
@@ -109,33 +110,209 @@ async def handle_del_alias(
 class MainArgs:
     keyword: UniMessage
     content: UniMessage
+    alias: UniMessage | None
 
-async def handle_main_args(
-    msg: UniMessage,
-    sub_command: str,
-) -> MainArgs | None:
-    """
-    从消息中提取 keyword 和 content 参数
-    """
+@dataclass
+class NotTextSegmentIndex:
+    parts: dict
+    indices: list
+
+def find_bracket_positions(msg_text: str) -> NotTextSegmentIndex:
+    pattern = r"\[[^\]]*\]"
+    matches = list(re.finditer(pattern, msg_text))
+
+    parts = {}
+    indices = []
+    last_end = 0
+    i = 0
+
+    for match in matches:
+        start, end = match.start(), match.end()
+        if start > last_end:  # 有非空的[]前部分
+            parts[i] = msg_text[last_end:start]
+            i += 1
+        parts[i] = match.group()
+        indices.append(i)
+        i += 1
+        last_end = end
+
+    if last_end < len(msg_text):  # 最后还有剩余部分
+        parts[i] = msg_text[last_end:]
+
+    return NotTextSegmentIndex(parts, indices)
+
+@dataclass
+class PartText:
+    start_at: int
+    end_at: int
+    text: str
+
+@dataclass
+class PartNotText:
+    start_at: int
+    end_at: int
+    not_text: str
+
+@dataclass
+class PartKeyword:
+    start_at: int
+    end_at: int
+    keyword: str
+
+@dataclass
+class PartContent:
+    start_at: int
+    end_at: int
+    content: str
+
+@dataclass
+class PartAlias:
+    start_at: int
+    end_at: int
+    alias: str
+
+def get_part_text(msg_text: str) -> list[PartText]:
+    pattern = r"\[[^\]]*\]"
+    matches = list(re.finditer(pattern, msg_text))
+
+    parts = []
+    last_end = 0
+
+    for match in matches:
+        start, end = match.start(), match.end()
+        if start > last_end:  # 有非空的[]前部分
+            parts.append(PartText(last_end, start, msg_text[last_end:start]))
+        last_end = end
+
+    if last_end < len(msg_text):  # 最后还有剩余部分
+        parts.append(PartText(last_end, len(msg_text), msg_text[last_end:]))
+
+    return parts
+
+def get_part_not_text(msg_text: str) -> list[PartNotText]:
+    pattern = r"\[[^\]]*\]"
+    matches = list(re.finditer(pattern, msg_text))
+
+    parts = []
+
+    for match in matches:
+        start, end = match.start(), match.end()
+        parts.append(PartNotText(start, end, match.group()))
+
+    return parts
+
+def get_part_keyword(msg_text: str) -> PartKeyword:
+    pattern = r'^(?:"((?:[^"\\]|\\.)*)"|(\S+))\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))$'
+    match = re.match(pattern, msg_text)
+
+    if not match:
+        raise ValueError("参数格式错误")
+
+    start_at = match.start(1) or match.start(2)
+    end_at = match.end(1) or match.end(2)
+    keyword = codecs.decode(match.group(1), "unicode_escape") or match.group(2)
+
+    return PartKeyword(start_at, end_at, keyword)
+
+def get_part_content(msg_text: str) -> PartContent:
+    pattern = r'^(?:"((?:[^"\\]|\\.)*)"|(\S+))\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))$'
+    match = re.match(pattern, msg_text)
+
+    if not match:
+        raise ValueError("参数格式错误")
+
+    start_at = match.start(3) or match.start(4)
+    end_at = match.end(3) or match.end(4)
+    content = codecs.decode(match.group(3), "unicode_escape") or match.group(4)
+
+    return PartContent(start_at, end_at, content)
+
+async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
     removed_prefix_msg = msg.removeprefix(f"pe {sub_command} ")
     onebot_v11_msg = await removed_prefix_msg.export(adapter="OneBot V11")
 
-    options_r = r"\s(?:-|--)(?:m|match|r|random|c|cron|s|scope|g|reg|a|alias)\s+\S+(?=$|\s)"
+    # 去除 alias 选项以外的其它选项
+    options_r = (
+        r"\s(?:-m|--match|-r|--random|-c|--cron|-s|--scope|-g|--reg)\s+\S+(?=$|\s)"
+    )
     matched_options = re.findall(options_r, str(onebot_v11_msg))
     for option in matched_options:
         removed_prefix_msg = removed_prefix_msg.replace(option, "")
-    clean_msg = removed_prefix_msg
-    logger.debug(f"去除选项后的消息: {clean_msg}")
-    msg_text = clean_msg.dump(json=True)
-    logger.debug(f"需要处理的消息: {msg_text}")
+    clean_msg = removed_prefix_msg.replace("[", "《《《《").replace("]", "》》》》")
 
-    onebot_v11_msg = re.sub(options_r, "", str(onebot_v11_msg)).strip()
-    main_args_r = r'^(?:"([^"]+)"|(\S+))\s+(?:"([^"]+)"|(.*))$'
-    match = re.match(main_args_r, onebot_v11_msg)
+    # 从消息中提取所有非文本消息段
+    not_text_segments = clean_msg.exclude(Text)
+
+    msg_text = str(clean_msg)
+    not_text_segment_index = 0
+
+    keyword = get_keyword(msg_text, not_text_segments, not_text_segment_index)
+
+    content = get_content(msg_text, not_text_segments, not_text_segment_index)
+
+    alias = get_alias(msg_text, not_text_segments, not_text_segment_index)
+
+    return MainArgs(keyword, content, alias)
+
+def get_part_alias(msg_text: str) -> PartAlias | None:
+    pattern = r'\s(?:-a|--alias)\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))'
+    match = re.search(pattern, msg_text)
+
     if not match:
         return None
-    keyword = match.group(1) or match.group(2)
-    content = match.group(3) or match.group(4)
-    uni_keyword = UniMessage(keyword)
-    uni_content = UniMessage(content)
-    return MainArgs(uni_keyword, uni_content)
+
+    start_at = match.start()
+    end_at = match.end()
+    alias = codecs.decode(match.group(1), "unicode_escape") or match.group(2)
+
+    return PartAlias(start_at, end_at, alias)
+
+def get_keyword(
+    msg_text: str,
+    not_text_segments: list,
+    not_text_segment_index: int
+) -> UniMessage:
+    keyword = UniMessage()
+    keyword_text = get_part_keyword(msg_text)
+    keyword_part_text = get_part_text(keyword_text.keyword)
+    for part in keyword_part_text:
+        if part.text.startswith("["):
+            keyword.append(part.text)
+        else:
+            keyword.append(not_text_segments[not_text_segment_index])
+            not_text_segment_index += 1
+    return keyword.replace("《《《《", "[").replace("》》》》", "]")
+
+def get_content(
+    msg_text: str,
+    not_text_segments: list,
+    not_text_segment_index: int
+) -> UniMessage:
+    content = UniMessage()
+    content_text = get_part_content(msg_text)
+    content_part_text = get_part_text(content_text.content)
+    for part in content_part_text:
+        if part.text.startswith("["):
+            content.append(part.text)
+        else:
+            content.append(not_text_segments[not_text_segment_index])
+            not_text_segment_index += 1
+    return content.replace("《《《《", "[").replace("》》》》", "]")
+
+def get_alias(
+    msg_text: str,
+    not_text_segments: list,
+    not_text_segment_index: int
+) -> UniMessage | None:
+    alias = UniMessage()
+    alias_text = get_part_alias(msg_text)
+    if not alias_text:
+        return None
+    alias_part_text = get_part_text(alias_text.alias)
+    for part in alias_part_text:
+        if part.text.startswith("["):
+            alias.append(part.text)
+        else:
+            alias.append(not_text_segments[not_text_segment_index])
+            not_text_segment_index += 1
+    return alias.replace("《《《《", "[").replace("》》》》", "]")
