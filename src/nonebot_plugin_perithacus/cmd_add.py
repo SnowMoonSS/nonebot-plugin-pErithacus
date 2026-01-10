@@ -1,6 +1,6 @@
 import json
 
-#from nonebot import logger
+from nonebot import logger
 from nonebot_plugin_alconna import (
     AlconnaMatch,
     Match,
@@ -42,6 +42,8 @@ async def _(  # noqa: PLR0913
     uni_msg: UniMsg,
     session: async_scoped_session,
 
+    keyword: Match[UniMessage] = AlconnaMatch("keyword"),
+    content: Match[UniMessage] = AlconnaMatch("content"),
     match_method: Match[str] = AlconnaMatch("match_method"),
     is_random: Match[bool] = AlconnaMatch("is_random"),
     cron: Match[str] = AlconnaMatch("cron"),
@@ -54,12 +56,15 @@ async def _(  # noqa: PLR0913
     """
 
     main_args = await handle_main_args(uni_msg, "add")
-    keyword_text = await save_media(main_args.keyword)
-    content_text = await save_media(main_args.content)
+    keyword_text = await save_media(keyword.result)
+    logger.debug(f"Keyword: {keyword_text}")
+    content_text = await save_media(content.result)
+    logger.debug(f"Content: {content_text}")
     this_source = get_source(target)
     cron_expressions = await get_cron(cron)
     scope_list = await get_scope(scope, this_source)
-    alias_text = await save_media(main_args.alias) if main_args.alias else ""
+    alias_text = await save_media(alias.result)
+    logger.debug(f"Alias: {alias_text}")
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:

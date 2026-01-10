@@ -153,24 +153,6 @@ class PartNotText:
     end_at: int
     not_text: str
 
-@dataclass
-class PartKeyword:
-    start_at: int
-    end_at: int
-    keyword: str
-
-@dataclass
-class PartContent:
-    start_at: int
-    end_at: int
-    content: str
-
-@dataclass
-class PartAlias:
-    start_at: int
-    end_at: int
-    alias: str
-
 def get_part_text(msg_text: str) -> list[PartText]:
     pattern = r"\[[^\]]*\]"
     matches = list(re.finditer(pattern, msg_text))
@@ -201,31 +183,87 @@ def get_part_not_text(msg_text: str) -> list[PartNotText]:
 
     return parts
 
-def get_part_keyword(msg_text: str) -> PartKeyword:
+def get_part_keyword(msg_text: str) -> str:
+    # 找到第一个非空格字符的位置
+    start_pos = 0
+    while start_pos < len(msg_text) and msg_text[start_pos] == " ":
+        start_pos += 1
+
+    # 如果全是空格，直接返回
+    if start_pos == len(msg_text):
+        return msg_text
+
+    # 检查第一个非空格字符是否是引号
+    if msg_text[start_pos] in ['"', "'"]:
+        quote_char = msg_text[start_pos]
+        end_quote = start_pos + 1
+        in_escape = False  # 标记是否在转义序列中
+
+        # 查找匹配的引号（跳过转义序列中的引号）
+        while end_quote < len(msg_text):
+            if in_escape:
+                in_escape = False
+                end_quote += 1
+                continue
+
+            if msg_text[end_quote] == "\\":
+                in_escape = True
+                end_quote += 1
+                continue
+
+            if msg_text[end_quote] == quote_char:
+                break
+
+            end_quote += 1
+        else:
+            # 没有找到匹配的引号，返回整个字符串（或按非引号处理）
+            return msg_text[start_pos+1:]  # 或者按非引号逻辑处理
+
+        # 如果找到匹配的引号，返回引号内的内容
+        if end_quote < len(msg_text) and msg_text[end_quote] == quote_char:
+            return msg_text[start_pos+1:end_quote]
+
+    # 非引号情况：处理第一个单词（包括前导空格）和后面空格
+    end_word = msg_text.find(" ", start_pos)
+    if end_word == -1:
+        return msg_text  # 没有空格，返回整个字符串
+    # 找到连续空格的结束位置
+    i = end_word
+    while i < len(msg_text) and msg_text[i] == " ":
+        i += 1
+
+    # 返回：前导空格 + 第一个单词 + 后面空格（去掉最后一个）
+    return msg_text[:end_word] + msg_text[end_word:i-1]
+
+def get_part_content(msg_text: str) -> str:
     pattern = r'^(?:"((?:[^"\\]|\\.)*)"|(\S+))\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))$'
     match = re.match(pattern, msg_text)
 
     if not match:
         raise ValueError("参数格式错误")
 
-    start_at = match.start(1) or match.start(2)
-    end_at = match.end(1) or match.end(2)
-    keyword = codecs.decode(match.group(1), "unicode_escape") or match.group(2)
+    # 第一个参数：要么 group(3)（引号），要么 group(4)（无引号）
+    quoted = match.group(3)
+    unquoted = match.group(4)
 
-    return PartKeyword(start_at, end_at, keyword)
+    if quoted is not None:
+        # 引号形式：解码内容，位置是引号内的范围（不包括引号）
+        content = codecs.decode(quoted, "unicode_escape")
+    else:
+        # 无引号形式：直接使用，位置就是整个 token
+        content = unquoted
 
-def get_part_content(msg_text: str) -> PartContent:
-    pattern = r'^(?:"((?:[^"\\]|\\.)*)"|(\S+))\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))$'
-    match = re.match(pattern, msg_text)
+    return content
+
+def get_part_alias(msg_text: str) -> str | None:
+    pattern = r'\s(?:-a|--alias)\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))'
+    match = re.search(pattern, msg_text)
 
     if not match:
-        raise ValueError("参数格式错误")
+        return None
 
-    start_at = match.start(3) or match.start(4)
-    end_at = match.end(3) or match.end(4)
-    content = codecs.decode(match.group(3), "unicode_escape") or match.group(4)
+    return codecs.decode(match.group(1), "unicode_escape") or match.group(2)
 
-    return PartContent(start_at, end_at, content)
 
 async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
     removed_prefix_msg = msg.removeprefix(f"pe {sub_command} ")
@@ -239,9 +277,11 @@ async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
     for option in matched_options:
         removed_prefix_msg = removed_prefix_msg.replace(option, "")
     clean_msg = removed_prefix_msg.replace("[", "《《《《").replace("]", "》》》》")
+    logger.debug(f"clean_msg: {clean_msg.dump(json=True)}")
 
     # 从消息中提取所有非文本消息段
     not_text_segments = clean_msg.exclude(Text)
+    logger.debug(f"not_text_segments: {not_text_segments.dump(json=True)}")
 
     msg_text = str(clean_msg)
     not_text_segment_index = 0
@@ -254,19 +294,6 @@ async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
 
     return MainArgs(keyword, content, alias)
 
-def get_part_alias(msg_text: str) -> PartAlias | None:
-    pattern = r'\s(?:-a|--alias)\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))'
-    match = re.search(pattern, msg_text)
-
-    if not match:
-        return None
-
-    start_at = match.start()
-    end_at = match.end()
-    alias = codecs.decode(match.group(1), "unicode_escape") or match.group(2)
-
-    return PartAlias(start_at, end_at, alias)
-
 def get_keyword(
     msg_text: str,
     not_text_segments: list,
@@ -274,13 +301,13 @@ def get_keyword(
 ) -> UniMessage:
     keyword = UniMessage()
     keyword_text = get_part_keyword(msg_text)
-    keyword_part_text = get_part_text(keyword_text.keyword)
+    keyword_part_text = get_part_text(keyword_text)
     for part in keyword_part_text:
         if part.text.startswith("["):
-            keyword.append(part.text)
-        else:
             keyword.append(not_text_segments[not_text_segment_index])
             not_text_segment_index += 1
+        else:
+            keyword.append(part.text)
     return keyword.replace("《《《《", "[").replace("》》》》", "]")
 
 def get_content(
@@ -290,13 +317,13 @@ def get_content(
 ) -> UniMessage:
     content = UniMessage()
     content_text = get_part_content(msg_text)
-    content_part_text = get_part_text(content_text.content)
+    content_part_text = get_part_text(content_text)
     for part in content_part_text:
         if part.text.startswith("["):
-            content.append(part.text)
-        else:
             content.append(not_text_segments[not_text_segment_index])
             not_text_segment_index += 1
+        else:
+            content.append(part.text)
     return content.replace("《《《《", "[").replace("》》》》", "]")
 
 def get_alias(
@@ -308,11 +335,13 @@ def get_alias(
     alias_text = get_part_alias(msg_text)
     if not alias_text:
         return None
-    alias_part_text = get_part_text(alias_text.alias)
+    alias_part_text = get_part_text(alias_text)
     for part in alias_part_text:
         if part.text.startswith("["):
-            alias.append(part.text)
-        else:
             alias.append(not_text_segments[not_text_segment_index])
             not_text_segment_index += 1
+        else:
+            alias.append(part.text)
     return alias.replace("《《《《", "[").replace("》》》》", "]")
+
+
