@@ -56,15 +56,21 @@ async def _(  # noqa: PLR0913
     """
 
     main_args = await handle_main_args(uni_msg, "add")
-    keyword_text = await save_media(keyword.result)
+    #keyword_text = await save_media(keyword.result)
+    keyword_text = await save_media(main_args.keyword)
     logger.debug(f"Keyword: {keyword_text}")
-    content_text = await save_media(content.result)
+    #content_text = await save_media(content.result)
+    content_text = await save_media(main_args.content)
     logger.debug(f"Content: {content_text}")
     this_source = get_source(target)
     cron_expressions = await get_cron(cron)
     scope_list = await get_scope(scope, this_source)
-    alias_text = await save_media(alias.result)
-    logger.debug(f"Alias: {alias_text}")
+    #alias_text = await save_media(alias.result)
+    if main_args.alias:
+        alias_text = await save_media(main_args.alias)
+        logger.debug(f"Alias: {alias_text}")
+    else:
+        alias_text = await save_media(alias.result)
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
