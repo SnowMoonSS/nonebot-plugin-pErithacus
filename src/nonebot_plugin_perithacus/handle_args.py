@@ -136,7 +136,7 @@ def get_part_keyword(msg_text: str) -> str:
     if msg_text.startswith(" "):
         pattern = r"\s\S"
         matches = list(re.finditer(pattern, msg_text))
-        keyword = msg_text[:matches[1].start()]
+        keyword = msg_text[:matches[1].start()] if matches[1] else msg_text
     elif msg_text.startswith('"'):
         pattern = r'"((?:[^"\\]|\\.)*)"'
         match = re.match(pattern, msg_text)
@@ -146,11 +146,11 @@ def get_part_keyword(msg_text: str) -> str:
             keyword = codecs.decode(keyword, "unicode_escape")
         else:
             matches = list(re.finditer(r"\s\S", msg_text))
-            keyword = msg_text[:matches[0].start()]
+            keyword = msg_text[:matches[0].start()] if matches[0] else msg_text
     else:
         pattern = r"\s\S"
         matches = list(re.finditer(pattern, msg_text))
-        keyword = msg_text[:matches[0].start()]
+        keyword = msg_text[:matches[0].start()] if matches[0] else msg_text
 
     return keyword
 
@@ -208,10 +208,23 @@ async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
     onebot_v11_msg = await removed_prefix_msg.export(adapter="OneBot V11")
 
     # 去除 alias 选项以外的其它选项
-    options_r = (
-        r"\s(?:-m|--match|-r|--random|-c|--cron|-s|--scope|-g|--reg)\s+\S+(?=$|\s)"
-    )
-    matched_options = re.findall(options_r, str(onebot_v11_msg))
+    if sub_command == "add":
+        options_r = (
+            r"\s(?:-m|--match|-r|--random|-c|--cron|-s|--scope|-g|--reg)\s+\S+(?=$|\s)"
+        )
+    elif sub_command == "del":
+        options_r = (
+            r"\s(?:-s|--scope)\s+\S+(?=$|\s)"
+        )
+    elif sub_command == "search":
+        options_r = (
+            r"\s(?:-s|--scope|-a|--all)\s+\S+(?=$|\s)"
+        )
+    elif sub_command == "edit":
+        options_r = (
+            r"\s(?:-m|--match|-r|--random|-c|--cron|-s|--scope|-g|--reg|-A|--del-alias|-C|--del_content|-p|--replace)\s+\S+(?=$|\s)"
+        )
+    matched_options = re.findall(options_r, str(onebot_v11_msg)) # pyright: ignore[reportPossiblyUnboundVariable]
     for option in matched_options:
         removed_prefix_msg = removed_prefix_msg.replace(option, "")
     clean_msg = removed_prefix_msg.replace("[", "《《《《").replace("]", "》》》》")

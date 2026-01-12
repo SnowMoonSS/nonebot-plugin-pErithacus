@@ -26,12 +26,12 @@ perithacus = Alconna(
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域", str], default=""),
         Option("-g|--reg", Args["reg#正则匹配的正则表达式", str], default=""),
-        Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
+        Option("-a|--alias", Args["alias#为词条添加别名", Any], default=""),
         help_text="添加词条",
     ),
     Subcommand(
         "del|删除",
-        Args["keyword#词条名", str],
+        Args["keyword#词条名", Any],
         Option("-s|--scope", Args["scope#作用域", str], default=""),
         help_text="删除词条。从作用域中删除指定的词条。未指定作用域时，删除当前会话所在的作用域。",
     ),
@@ -45,7 +45,7 @@ perithacus = Alconna(
     ),
     Subcommand(
         "search|搜索",
-        Args["keyword#关键词", str]["page?#页码，列出指定页的搜索结果", int],
+        Args["keyword#关键词", Any]["page?#页码，列出指定页的搜索结果", int],
         Option("-s|--scope", Args["scope#作用域", str], default=""),
         Option("-a|--all", dest="is_all", default=False, action=store_true),
         help_text="搜索词条",
@@ -65,7 +65,7 @@ perithacus = Alconna(
     ),
     Subcommand(
         "edit|修改",
-        Args["keyword#词条名", str],
+        Args["keyword#词条名", Any],
         Option("-r|--random", Args["is_random#是否随机回复", bool], default=True),
         Option(
             "-m|--match",
@@ -75,7 +75,7 @@ perithacus = Alconna(
         Option("-c|--cron", Args["cron#定时触发的cron表达式", str], default=""),
         Option("-s|--scope", Args["scope#作用域群号", str], default=""),
         Option("-g|--regex", Args["reg#正则匹配的正则表达式", str], default=""),
-        Option("-a|--alias", Args["alias#为词条添加别名", str], default=""),
+        Option("-a|--alias", Args["alias#为词条添加别名", Any], default=""),
         Option(
             "-A|--del_alias",
             Args["del_alias_id#删除指定序号的别名", str],

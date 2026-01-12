@@ -42,8 +42,8 @@ async def _(  # noqa: PLR0913
     uni_msg: UniMsg,
     session: async_scoped_session,
 
-    keyword: Match[UniMessage] = AlconnaMatch("keyword"),
-    content: Match[UniMessage] = AlconnaMatch("content"),
+    #keyword: Match[UniMessage] = AlconnaMatch("keyword"),
+    #content: Match[UniMessage] = AlconnaMatch("content"),
     match_method: Match[str] = AlconnaMatch("match_method"),
     is_random: Match[bool] = AlconnaMatch("is_random"),
     cron: Match[str] = AlconnaMatch("cron"),
