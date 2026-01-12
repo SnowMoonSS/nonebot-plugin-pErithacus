@@ -10,8 +10,7 @@ import filetype
 import httpx
 from apscheduler.triggers.cron import CronTrigger
 from nonebot import logger
-from nonebot.adapters import Event  # noqa: TC002
-from nonebot_plugin_alconna import Match, UniMessage
+from nonebot_plugin_alconna import Match, MsgTarget, UniMessage
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 from .command import pe
@@ -169,22 +168,13 @@ def uni_message_to_dumpped_data(data: UniMessage) -> str:
 
     return json.dumps(loaded_data, ensure_ascii=False)
 
-def get_source(event: Event) -> str:
+def get_source(target: MsgTarget) -> str:
     """
     获取消息来源
     """
-    session_id = event.get_session_id()
-    # 根据 session_id 格式设置 source 变量
-    if session_id.startswith("group_"):
-        # group_{groupid}_{userid} 格式，提取 groupid
-        group_id = session_id.split("_")[1]
-        this_source = f"g{group_id}"
-    else:
-        # {userid} 格式，直接使用 userid
-        user_id = session_id
-        this_source = f"u{user_id}"
-
-    return this_source
+    if target.private:
+        return f"u{target.id}"
+    return f"g{target.id}"
 
 async def get_cron(cron: Match) -> None | str:
     """

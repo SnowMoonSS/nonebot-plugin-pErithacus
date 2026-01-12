@@ -4,8 +4,14 @@ import json
 from typing import TYPE_CHECKING
 
 from nonebot import logger
-from nonebot.adapters import Event  # noqa: TC002
-from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
+from nonebot_plugin_alconna import (
+    AlconnaMatch,
+    AlconnaQuery,
+    Match,
+    MsgTarget,
+    Query,
+    UniMessage,
+)
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
@@ -18,7 +24,7 @@ if TYPE_CHECKING:
 
 @pe.assign("search")
 async def _(  # noqa: PLR0913
-    event: Event,
+    target: MsgTarget,
     session : async_scoped_session,
 
     keyword: Match[UniMessage] = AlconnaMatch("keyword"),
@@ -36,7 +42,7 @@ async def _(  # noqa: PLR0913
 
     logger.debug(f"is_all: {is_all.result}")
 
-    this_source = get_source(event)
+    this_source = get_source(target)
     scope_list = await get_scope(scope, this_source)
     key = await get_key(keyword)
 
