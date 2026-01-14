@@ -127,8 +127,6 @@ def load_media(data: str) -> UniMessage:
     输入存储的JSON数组字符串，返回包含媒体文件的UniMessage对象
     """
 
-    media_save_dir = get_plugin_data_dir() / "media"
-
     loadded_data = json.loads(data)
     for item in loadded_data:
         if item.get("media"):
