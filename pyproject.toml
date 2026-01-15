@@ -14,7 +14,7 @@ dependencies = [
   "nonebot-plugin-apscheduler>=0.5.0",
 ]
 authors = [{ name = "SnowMoonSS" }]
-license = "GPL-3.0-only"
+license = "MIT"
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.14",
