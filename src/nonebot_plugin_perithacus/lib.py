@@ -138,7 +138,8 @@ def load_media(data: str) -> UniMessage:
 
 async def convert_media(data: UniMessage) -> str:
     """
-    输入解析得到的元组，返回处理后的JSON数组，与 save_media 保存下来的格式一致
+    输入解析得到的元组，返回处理后的JSON数组，与 save_media() 保存下来的格式一致
+    不保存任何媒体
     """
     uni_data = UniMessage(data)
     dumped_uni_data = uni_data.dump(json=True)

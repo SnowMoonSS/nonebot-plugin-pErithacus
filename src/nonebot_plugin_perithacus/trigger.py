@@ -17,7 +17,7 @@ async def _(
 ):
 
     msg_text = uni_message_to_dumpped_data(uni_msg)
-    logger.debug(f"收到消息 {msg_text}")
+    logger.debug(f"收到消息: {msg_text}")
 
     this_source = get_source(target)
     scope_list = [this_source]
