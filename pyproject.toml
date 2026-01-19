@@ -57,7 +57,7 @@ nonebot-plugin-orm = ["nonebot_plugin_orm"]
 nonebot-plugin-apscheduler = ["nonebot_plugin_apscheduler"]
 
 [tool.ruff]
-line-length = 88
+line-length = 128
 target-version = "py314"
 
 [tool.ruff.format]

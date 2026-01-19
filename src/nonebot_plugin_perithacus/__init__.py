@@ -20,6 +20,8 @@ from . import command as command
 from . import database as database
 from . import handle_args as handle_args
 from . import lib as lib
+from . import pe_message as pe_message
+from . import pe_segment as pe_segment
 from . import trigger as trigger
 from .apscheduler import load_cron_tasks
 from .upgrade_database import upgrade_content_db
