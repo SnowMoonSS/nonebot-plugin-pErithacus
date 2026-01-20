@@ -41,7 +41,7 @@ class PeMessage(UniMessage):
         Returns:
             Union[str, list[dict]]: 序列化后的消息
         """
-        result = [seg.dump(media_save_dir=media_save_dir,unsave = unsave) for seg in self]
+        result = [seg.dump(media_save_dir = media_save_dir, unsave = unsave) for seg in self]
         return dumps(result, ensure_ascii=False) if json else result
 
     async def download(self, stream: bool = False, **kwargs: Any) -> Self:  # noqa: FBT001, FBT002

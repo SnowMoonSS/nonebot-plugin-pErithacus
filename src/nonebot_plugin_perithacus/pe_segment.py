@@ -13,11 +13,14 @@ from nonebot_plugin_alconna.uniseg.segment import (
 )
 from nonebot_plugin_alconna.uniseg.utils import fleep
 
+from .pe_message import PeMessage
+
 
 class PeSegment(Segment):
     """
     Segment 类，用于处理消息段
     """
+
     def dump(
         self,
         *,
@@ -51,10 +54,7 @@ class PeSegment(Segment):
                 data["path"] = str(path.resolve().as_posix())
         if self._children:
             data["children"] = [
-                child.dump(media_save_dir=media_save_dir, unsave=unsave)
-                if isinstance(child, PeSegment)
-                else child.dump(media_save_dir=media_save_dir)
-                for child in self._children
+                child.dump(media_save_dir=media_save_dir, unsave = unsave) for child in self._children
             ]
         return data
 
