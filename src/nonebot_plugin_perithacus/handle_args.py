@@ -163,10 +163,7 @@ def get_part_content(msg_text: str) -> str:
         start_index = matches[1].start()
         sub_string = msg_text[start_index:]
         clean_content = param_pattern.sub("", sub_string)
-        if clean_content.startswith(" "):
-            content = clean_content.removeprefix(" ")
-        else:
-            content = clean_content
+        content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
     elif msg_text.startswith('"'):
         pattern = r'"(?:[^"\\]|\\.)*"'
         match = re.match(pattern, msg_text)
@@ -174,19 +171,13 @@ def get_part_content(msg_text: str) -> str:
             end_pos = match.end()
             content = msg_text[end_pos:]
             clean_content = param_pattern.sub("", content)
-            if clean_content.startswith(" "):
-                content = clean_content.removeprefix(" ")
-            else:
-                content = clean_content
+            content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
     else:
         matches = list(re.finditer(r"\s\S", msg_text))
         start_index = matches[0].start()
         sub_string = msg_text[start_index:]
         clean_content = param_pattern.sub("", sub_string)
-        if clean_content.startswith(" "):
-            content = clean_content.removeprefix(" ")
-        else:
-            content = clean_content
+        content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
     return content
 
 def get_part_alias(msg_text: str) -> str | None:

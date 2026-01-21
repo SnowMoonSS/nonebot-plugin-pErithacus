@@ -5,12 +5,15 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import filetype
 import httpx
 from apscheduler.triggers.cron import CronTrigger
-from nonebot import logger
+from nonebot import get_driver, logger
+from nonebot.internal.driver import Driver, HTTPClientMixin, Request
 from nonebot_plugin_alconna import Match, MsgTarget, UniMessage
+from nonebot_plugin_alconna.uniseg.segment import Media
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 from .command import pe
@@ -229,3 +232,70 @@ async def get_num_list(num_str: str) -> list[int]:
         else:
             num_list.append(int(part))
     return num_list
+
+async def _download_with_driver(
+    media_url: str,
+    driver: Driver,
+    *,
+    stream: bool,
+    **kwargs: Any
+) -> bytes:
+    request = Request("GET", media_url)
+    sess = driver.get_session(**kwargs) # pyright: ignore[reportAttributeAccessIssue] 不支持 HTTPClientMixin 的 Driver 不会被传入这个函数
+    raw = b""
+    if stream:
+        async for chunk in sess.stream_request(request):
+            raw += chunk.content
+    else:
+        response = await sess.request(request)
+        raw = response.content
+
+    return raw
+
+async def _download_with_httpx(
+    media_url: str,
+    *,
+    stream: bool,
+    **kwargs: Any
+) -> bytes:
+    async with httpx.AsyncClient(**kwargs) as client:
+        if stream:
+            raw = b""
+            async with client.stream("GET", media_url) as response:
+                async for chunk in response.aiter_bytes():
+                    raw += chunk
+            return raw
+        response = await client.get(media_url)
+        return response.content
+
+async def download_with_fallback(
+    self: UniMessage,
+    stream: bool = False,  # noqa: FBT001, FBT002
+    **kwargs: Any
+) -> UniMessage:
+    """将消息中的媒体链接下载为文件数据
+
+    Args:
+        stream (bool, optional): 是否以流式下载. Defaults to False.
+        **kwargs: 传递给下载器的参数
+    """
+    driver = get_driver()
+    use_driver = isinstance(driver, HTTPClientMixin)
+
+    for media in self.select(Media):
+        if not media.url:
+            continue
+
+        if use_driver:
+            raw = await _download_with_driver(media.url, driver, stream = stream, **kwargs)
+        else:
+            raw = await _download_with_httpx(media.url, stream = stream, **kwargs)
+
+        media.url = None
+        media.raw = raw.encode() if isinstance(raw, str) else raw
+
+    return self
+
+
+# 将方法绑定到 UniMessage
+UniMessage.download = download_with_fallback
