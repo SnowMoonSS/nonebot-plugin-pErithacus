@@ -1,9 +1,11 @@
-
+import base64
 import hashlib
 import json
 import os
 import re
 import tempfile
+from dataclasses import fields
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -12,13 +14,13 @@ import httpx
 from apscheduler.triggers.cron import CronTrigger
 from nonebot import get_driver, logger
 from nonebot.internal.driver import Driver, HTTPClientMixin, Request
-from nonebot_plugin_alconna import Match, MsgTarget, UniMessage
+from nonebot_plugin_alconna import Match, MsgTarget, Segment, UniMessage
 from nonebot_plugin_alconna.uniseg.segment import Media
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 from .command import pe
 
-media_save_dir = get_plugin_data_dir() / "media"
+MEDIA_SAVE_DIR = get_plugin_data_dir() / "media"
 
 async def download_media(
         url: str,
@@ -115,7 +117,7 @@ async def save_media(data: UniMessage) -> str:
     for item in loadded_data:
         if "url" in item:
             # 下载文件
-            file_path = await download_media(item["url"], media_save_dir)
+            file_path = await download_media(item["url"], MEDIA_SAVE_DIR)
             item["id"] = file_path.name if file_path else item["id"]
             # 标记为 media
             item["media"] = True
@@ -133,7 +135,7 @@ def load_media(data: str) -> UniMessage:
     loadded_data = json.loads(data)
     for item in loadded_data:
         if item.get("media"):
-            item["path"] = str(media_save_dir / item["id"])
+            item["path"] = str(MEDIA_SAVE_DIR / item["id"])
             del item["media"]
 
     dumped_data = json.dumps(loadded_data, ensure_ascii=False)
@@ -150,7 +152,7 @@ async def convert_media(data: UniMessage) -> str:
     for item in loaded_data:
         if "url" in item:
             # 构造文件路径，但不保存
-            file_path = await download_media(item["url"], media_save_dir, json=True)
+            file_path = await download_media(item["url"], MEDIA_SAVE_DIR, json=True)
             item["id"] = file_path.name if file_path else item["id"]
             del item["url"]
             item["media"] = True
@@ -289,13 +291,38 @@ async def download_with_fallback(
         if use_driver:
             raw = await _download_with_driver(media.url, driver, stream = stream, **kwargs)
         else:
+            logger.debug("当前驱动器不支持 http 客户端，使用 httpx 下载")
             raw = await _download_with_httpx(media.url, stream = stream, **kwargs)
 
         media.url = None
-        media.raw = raw.encode() if isinstance(raw, str) else raw
+        media.raw = raw
 
     return self
 
 
 # 将方法绑定到 UniMessage
 UniMessage.download = download_with_fallback
+
+def save(
+    self: Media,
+    media_save_dir: str | Path | None = None
+) -> Path:
+    if not self.raw:
+        raise ValueError
+    dir_ = Path(media_save_dir) if isinstance(media_save_dir, (str, Path)) else MEDIA_SAVE_DIR
+    raw = self.raw.getvalue() if isinstance(self.raw, BytesIO) else self.raw
+    kind = filetype.guess(raw)
+    if kind:
+        ext = "." + kind.extension if kind else ".bin"
+    else:
+        logger.info("Media.save: Unknow Filetype")
+        ext = ".bin"
+    md5 = hashlib.md5(raw).hexdigest().upper()
+    path = dir_ / f"{md5}.{ext}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not media_save_dir:
+        with path.open("wb+") as f:
+            f.write(raw)
+    return path.resolve()
+
+Media.save = save
