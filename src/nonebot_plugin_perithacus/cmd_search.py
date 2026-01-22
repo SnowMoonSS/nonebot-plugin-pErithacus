@@ -56,10 +56,7 @@ async def _(  # noqa: PLR0913
         # 分页处理
         page_size = 5
         total_count = len(result_list)
-        if total_count > 0:
-            total_pages = (total_count + page_size - 1) // page_size
-        else:
-            total_pages = 1
+        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
 
         # 获取当前页码
         current_page = page.result if page.available and page.result > 0 else 1
