@@ -1,17 +1,22 @@
+import base64
 import hashlib
 import json
 import os
 import re
 import tempfile
+from dataclasses import fields
 from io import BytesIO
+from json import dumps
 from pathlib import Path
+from typing import Any
 
 import filetype
 import httpx
 from apscheduler.triggers.cron import CronTrigger
-from nonebot import logger
+from nonebot import get_driver, logger
+from nonebot.internal.driver import HTTPClientMixin, Request
 from nonebot_plugin_alconna import Match, MsgTarget, UniMessage
-from nonebot_plugin_alconna.uniseg.segment import Media
+from nonebot_plugin_alconna.uniseg.segment import Media, Segment
 from nonebot_plugin_localstore import get_plugin_data_dir
 
 from .command import pe
@@ -143,7 +148,7 @@ async def convert_media(data: UniMessage) -> str:
     不保存任何媒体
     """
     uni_data = UniMessage(data)
-    dumped_uni_data = uni_data.dump(json=True)
+    dumped_uni_data = uni_data.dump(media_save_dir=False, json=True)
     loaded_data = json.loads(dumped_uni_data)
     for item in loaded_data:
         if "url" in item:
@@ -231,26 +236,123 @@ async def get_num_list(num_str: str) -> list[int]:
             num_list.append(int(part))
     return num_list
 
-def save(
+async def pe_download(
+    self: UniMessage,
+    *,
+    stream: bool = False,
+    **kwargs: Any
+) -> UniMessage:
+    """将消息中的媒体链接下载为文件数据
+
+    Args:
+        stream (bool, optional): 是否以流式下载. Defaults to False.
+        **kwargs: 传递给下载器的参数
+    """
+    logger.debug("开始下载媒体数据")
+    driver = get_driver()
+    use_driver = isinstance(driver, HTTPClientMixin)
+    for media in self.select(Media):
+        if not media.url:
+            continue
+        raw: bytes = b""
+        if use_driver:
+            request = Request("GET", media.url)
+            sess = driver.get_session(**kwargs)
+            if stream:
+                async for chunk in sess.stream_request(request):
+                    raw += chunk.content # pyright: ignore[reportOperatorIssue]
+            else:
+                response = await sess.request(request)
+                raw = response.content # pyright: ignore[reportAssignmentType]
+        else:
+            logger.debug("当前驱动器不支持 http 客户端，使用 httpx 下载")
+            async with httpx.AsyncClient(**kwargs) as client:
+                if stream:
+                    raw = b""
+                    async with client.stream("GET", media.url) as response:
+                        async for chunk in response.aiter_bytes():
+                            raw += chunk
+                else:
+                    response = await client.get(media.url)
+                    raw = response.content
+        media.url = None
+        media.raw = raw
+
+        md5 = hashlib.md5(media.raw).hexdigest().upper()
+        kind = filetype.guess(media.raw)
+        ext = kind.extension if kind else "bin"
+        media.id = f"{md5}.{ext}"
+    return self
+
+def pe_uni_dump(
+    self: UniMessage,
+    *,
+    media_save_dir: str | Path | bool | None = None,
+    json: bool = False
+) -> str | list[dict[str, Any]]:
+    """将消息序列化为 JSON 格式
+
+    注意：
+        若 media_save_dir 为 False，则不会保存媒体文件。
+        若 media_save_dir 为 True，则会将文件数据转为 base64 编码。
+        若不指定 media_save_dir，则会尝试导入 `nonebot_plugin_localstore` 并使用其提供的路径。
+        否则，将会尝试使用当前工作目录。
+
+    Args:
+        media_save_dir (Union[str, Path， bool, None], optional): 媒体文件保存路径. Defaults to None.
+        json (bool, optional): 是否返回 JSON 字符串. Defaults to False.
+
+    Returns:
+        Union[str, list[dict]]: 序列化后的消息
+    """
+    result = [pe_seg_dump(seg, media_save_dir=media_save_dir) for seg in self]
+    return dumps(result, ensure_ascii=False) if json else result
+
+def pe_seg_dump(
+    self: Segment,
+    *,
+    media_save_dir: str | Path | bool | None = None,
+) -> dict:
+    """将对象转为 dict 数据
+    注意：
+        若 media_save_dir 为 False，则不会保存媒体文件。
+        若 media_save_dir 为 True，则会将文件数据转为 base64 编码。
+        若不指定 media_save_dir，则会尝试导入 `nonebot_plugin_localstore` 并使用其提供的路径。
+        否则，将会尝试使用当前工作目录。
+    """
+    data = {f.name: getattr(self, f.name) for f in fields(self) if f.name not in ("origin", "_children")}
+    data = {"type": self.type, **{k: v for k, v in data.items() if v is not None}}
+    if isinstance(self, Media):
+        if self.name == self.__default_name__:
+            data.pop("name", None)
+        if self.url or self.path or not self.raw:
+            data.pop("raw", None)
+            data.pop("mimetype", None)
+        elif media_save_dir is True:
+            data["raw"] = base64.b64encode(self.raw_bytes).decode()
+        elif media_save_dir is not False:
+            path = pe_save(self, media_save_dir=media_save_dir)
+            data.pop("raw", None)
+            data.pop("mimetype", None)
+            data["path"] = str(path.resolve().as_posix())
+        elif media_save_dir is False:
+            data.pop("raw", None)
+            data.pop("mimetype", None)
+    if self._children:
+        data["children"] = [pe_seg_dump(child, media_save_dir=media_save_dir) for child in self._children]
+    return data
+
+def pe_save(
     self: Media,
-    media_save_dir: str | Path | None = None
+    *,
+    media_save_dir: str | Path | bool | None = None
 ) -> Path:
     if not self.raw:
         raise ValueError
     dir_ = Path(media_save_dir) if isinstance(media_save_dir, (str, Path)) else MEDIA_SAVE_DIR
     raw = self.raw.getvalue() if isinstance(self.raw, BytesIO) else self.raw
-    kind = filetype.guess(raw)
-    if kind:
-        ext = "." + kind.extension if kind else ".bin"
-    else:
-        logger.info("Media.save: Unknow Filetype")
-        ext = ".bin"
-    md5 = hashlib.md5(raw).hexdigest().upper()
-    path = dir_ / f"{md5}.{ext}"
+    path = dir_ / f"{self.id}"
     path.parent.mkdir(parents=True, exist_ok=True)
-    if not media_save_dir:
-        with path.open("wb+") as f:
-            f.write(raw)
+    with path.open("wb+") as f:
+        f.write(raw)
     return path.resolve()
-
-Media.save = save
