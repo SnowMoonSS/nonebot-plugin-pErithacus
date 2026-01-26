@@ -8,7 +8,7 @@ from dataclasses import fields
 from io import BytesIO
 from json import dumps
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 import filetype
 import httpx
@@ -284,6 +284,22 @@ async def pe_download(
         media.id = f"{md5}.{ext}"
     return self
 
+@overload
+def pe_uni_dump(
+    self: UniMessage,
+    *,
+    media_save_dir: str | Path | bool | None = None,
+    json: Literal[False] = False
+) -> list[dict[str, Any]]: ...
+
+@overload
+def pe_uni_dump(
+    self: UniMessage,
+    *,
+    media_save_dir: str | Path | bool | None = None,
+    json: Literal[True]
+) -> str: ...
+
 def pe_uni_dump(
     self: UniMessage,
     *,
@@ -331,10 +347,9 @@ def pe_seg_dump(
         elif media_save_dir is True:
             data["raw"] = base64.b64encode(self.raw_bytes).decode()
         elif media_save_dir is not False:
-            path = pe_save(self, media_save_dir=media_save_dir)
+            pe_save(self, media_save_dir=media_save_dir)
             data.pop("raw", None)
             data.pop("mimetype", None)
-            data["path"] = str(path.resolve().as_posix())
         elif media_save_dir is False:
             data.pop("raw", None)
             data.pop("mimetype", None)
@@ -356,3 +371,49 @@ def pe_save(
     with path.open("wb+") as f:
         f.write(raw)
     return path.resolve()
+
+async def dump_msg(
+    msg: UniMessage,
+    *,
+    media_save_dir: str | Path | bool | None = None
+) -> str:
+    """
+    将消息序列化为 JSON 格式
+
+    :param msg: 消息
+    :type msg: UniMessage
+    :param media_save_dir: 媒体文件保存路径
+    :type media_save_dir: str | Path | bool | None
+    :return: 序列化的消息
+    :rtype: str
+    """
+
+    if isinstance(msg, tuple):
+        msg = UniMessage(msg)
+
+    msg = await pe_download(msg)
+    return pe_uni_dump(msg, media_save_dir=media_save_dir, json=True)
+
+def load_msg(msg: str) -> UniMessage:
+    """
+    将 JSON 格式的消息转为消息对象
+
+    :param msg: JSON 格式的消息
+    :type msg: str
+    :return: 消息对象
+    :rtype: UniMessage
+    """
+    uni_message = UniMessage.load(msg)
+    for seg in uni_message:
+        _process_segment_recursive(seg)
+    return uni_message
+
+def _process_segment_recursive(seg: Segment):
+    """递归处理单个段落"""
+    if isinstance(seg, Media):
+        seg.path = f"{MEDIA_SAVE_DIR}/{seg.id}" if seg.path is None else seg.path
+
+    # 递归处理子元素
+    if seg._children:
+        for child in seg._children:
+            _process_segment_recursive(child)
