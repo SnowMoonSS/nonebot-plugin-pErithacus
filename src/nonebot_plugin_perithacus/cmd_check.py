@@ -6,7 +6,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import get_entry_by_id
-from .lib import load_media
+from .lib import load_msg
 
 
 @pe.assign("check")
@@ -21,7 +21,7 @@ async def _(
     entry = await get_entry_by_id(session, entry_id.result)
     if entry:
         if force.result.value or not entry.deleted:
-            keyword = load_media(entry.keyword)
+            keyword = load_msg(entry.keyword)
             # 将UTC时间转换为北京时间
             beijing_tz = timezone(timedelta(hours=8))
             date_create = entry.date_create.replace(tzinfo=UTC)
@@ -46,7 +46,7 @@ async def _(
             aliases_msg = UniMessage()
             aliases_json = json.loads(entry.alias) if entry.alias else []
             for idx, alias in enumerate(aliases_json, start=1):
-                alias_loaded = load_media(alias)
+                alias_loaded = load_msg(alias)
                 aliases_msg += UniMessage(f"{idx}. {alias_loaded}\n")
 
             await pe.finish(msg + aliases_msg)

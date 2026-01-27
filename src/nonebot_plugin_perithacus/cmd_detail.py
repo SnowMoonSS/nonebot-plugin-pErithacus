@@ -5,7 +5,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import get_contents, get_entry_by_id
-from .lib import load_media
+from .lib import load_msg
 
 
 @pe.assign("detail")
@@ -37,10 +37,7 @@ async def _(
             # 分页处理
             page_size = 5
             total_count = len(rows)
-            if total_count > 0:
-                total_pages = (total_count + page_size - 1) // page_size
-            else:
-                total_pages = 1
+            total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
 
             # 获取当前页码
             current_page = page.result if page.available and page.result > 0 else 1
@@ -51,7 +48,7 @@ async def _(
             end_index = min(start_index + page_size, total_count)
 
             msg = UniMessage(
-                f"词条 {entry.id} : " + load_media(entry.keyword) +
+                f"词条 {entry.id} : " + load_msg(entry.keyword) +
                 f"的内容如下（第 {current_page}/{total_pages} 页）：\n"
             )
 
@@ -63,7 +60,7 @@ async def _(
                 date_modified = date_modified.astimezone(beijing_tz)
                 msg.extend(
                     f"{row.id}　" +
-                    load_media(row.content) +
+                    load_msg(row.content) +
                     f"　时间: {date_modified}\n"
                 )
 

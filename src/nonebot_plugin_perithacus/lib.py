@@ -379,6 +379,10 @@ async def dump_msg(
 ) -> str:
     """
     将消息序列化为 JSON 格式
+    注意：
+        若 media_save_dir 为 False，则不会保存媒体文件。
+        若 media_save_dir 为 True，则会将文件数据转为 base64 编码。
+        若不指定 media_save_dir，则会保存到 MEDIA_SAVE_DIR。
 
     :param msg: 消息
     :type msg: UniMessage

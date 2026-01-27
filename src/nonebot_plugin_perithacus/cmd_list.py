@@ -11,7 +11,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import get_entries
-from .lib import get_scope, get_source, load_media
+from .lib import get_scope, get_source, load_msg
 
 
 @pe.assign("list")
@@ -48,10 +48,7 @@ async def _(  # noqa: PLR0913
         # 分页处理
         page_size = 5
         total_count = len(entries)
-        if total_count > 0:
-            total_pages = (total_count + page_size - 1) // page_size
-        else:
-            total_pages = 1
+        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
 
         # 获取当前页码
         current_page = page.result if page.available and page.result > 0 else 1
@@ -67,7 +64,7 @@ async def _(  # noqa: PLR0913
         for i in range(start_index, end_index):
             entry = entries[i]
             entry_id = entry.id
-            uni_keyword = load_media(entry.keyword)
+            uni_keyword = load_msg(entry.keyword)
             message.extend(f"\n{entry_id}：" + uni_keyword)
     else:
         message = UniMessage("尚无词条，使用 pe add 添加词条")

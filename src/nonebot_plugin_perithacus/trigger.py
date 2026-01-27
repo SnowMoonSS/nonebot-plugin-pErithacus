@@ -6,7 +6,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import on_every_message
 from .database import get_contents, get_entry
-from .lib import convert_media, get_source, load_media, pe_download
+from .lib import dump_msg, get_source, load_msg, pe_download
 
 
 @on_every_message.handle()
@@ -18,7 +18,7 @@ async def _(
     uni_msg = await pe_download(uni_msg)
     await uni_msg.download()
     logger.debug(f"原始消息: {uni_msg.dump(media_save_dir=False, json=True)}")
-    msg_text = await convert_media(uni_msg)
+    msg_text = await dump_msg(uni_msg, media_save_dir=False)
     logger.debug(f"收到消息: {msg_text}")
 
     this_source = get_source(target)
@@ -36,7 +36,7 @@ async def _(
             else:
                 content = max(contents, key=lambda x: x.date_modified)
                 logger.debug(f"选择最新内容 ID {content.id} 进行发送")
-            await UniMessage.finish(load_media(content.content))
+            await UniMessage.finish(load_msg(content.content))
         else:
             logger.debug("所有内容已标记为已删除")
             await on_every_message.finish()

@@ -20,7 +20,7 @@ from .handle_args import (
     handle_reg,
     handle_scope,
 )
-from .lib import get_num_list, get_scope, get_source, save_media
+from .lib import dump_msg, get_num_list, get_scope, get_source
 
 
 @pe.assign("edit")
@@ -29,7 +29,6 @@ async def _(  # noqa: PLR0913
     uni_msg: UniMsg,
     session : async_scoped_session,
 
-    #keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     match_method: Match[str] = AlconnaMatch("match_method"),
     is_random: Match[bool] = AlconnaMatch("is_random"),
     cron: Match[str] = AlconnaMatch("cron"),
@@ -60,16 +59,15 @@ async def _(  # noqa: PLR0913
 
     main_args = await handle_main_args(uni_msg, "edit")
 
-    #keyword_text = await save_media(keyword.result)
-    keyword_text = await save_media(main_args.keyword)
-    content_text = await save_media(content.result)
+    keyword_text = await dump_msg(main_args.keyword)
+    content_text = await dump_msg(content.result)
     this_source = get_source(target)
     scope_list = await get_scope(scope, this_source)
     if main_args.alias:
-        alias_text = await save_media(main_args.alias)
+        alias_text = await dump_msg(main_args.alias)
         logger.debug(f"Alias: {alias_text}")
     else:
-        alias_text = await save_media(alias.result)
+        alias_text = await dump_msg(alias.result)
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if not existing_entry:
