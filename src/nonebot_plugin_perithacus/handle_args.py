@@ -194,6 +194,7 @@ def get_part_alias(msg_text: str) -> str | None:
         alias = match.group(2)
 
     return alias
+
 async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
     removed_prefix_msg = msg.removeprefix(f"pe {sub_command} ")
     onebot_v11_msg = await removed_prefix_msg.export(adapter="OneBot V11")
@@ -219,13 +220,13 @@ async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
     for option in matched_options:
         removed_prefix_msg = removed_prefix_msg.replace(option, "")
     clean_msg = removed_prefix_msg.replace("[", "《《《《").replace("]", "》》》》")
+    msg_text = str(clean_msg)
     logger.debug(f"clean_msg: {clean_msg.dump(json=True)}")
 
     # 从消息中提取所有非文本消息段
     not_text_segments = clean_msg.exclude(Text)
     logger.debug(f"not_text_segments: {not_text_segments.dump(json=True)}")
 
-    msg_text = str(clean_msg)
     logger.debug(f"msg_text: {msg_text}")
     not_text_segment_index = 0
 

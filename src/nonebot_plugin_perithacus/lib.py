@@ -375,7 +375,7 @@ def pe_save(
 async def dump_msg(
     msg: UniMessage,
     *,
-    media_save_dir: str | Path | bool | None = None
+    media_save_dir: str | Path | bool | None = MEDIA_SAVE_DIR
 ) -> str:
     """
     将消息序列化为 JSON 格式
@@ -411,7 +411,7 @@ def load_msg(msg: str) -> UniMessage:
 def _process_segment_recursive(seg: Segment):
     """递归处理单个段落"""
     if isinstance(seg, Media):
-        seg.path = f"{MEDIA_SAVE_DIR}/{seg.id}" if seg.path is None else seg.path
+        seg.path = str(MEDIA_SAVE_DIR / seg.id) if seg.path is None and seg.id is not None else seg.path
 
     # 递归处理子元素
     if seg._children:
