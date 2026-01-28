@@ -38,7 +38,7 @@ async def upgrade_content_db() -> bool:
     db_path = get_plugin_data_dir() / "content.db"
 
     if not db_path.exists():
-        logger.info("无旧库，视为第一次启动，无需升级")
+        logger.debug("数据库：无旧库，无需升级")
         return True  # 无旧库，视为成功
 
     engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
@@ -66,7 +66,7 @@ async def upgrade_content_db() -> bool:
             elif row[0] == content_version_2:
                 sucess = await upgrade_content_db_2_to_3(engine)
             elif row[0] == content_version_3:
-                logger.info("数据库已是最新版本")
+                logger.info("数据库：升级完成")
                 sucess = True
             else:
                 logger.warning(f"数据库版本 {row[0]} 不支持")
@@ -204,7 +204,7 @@ async def upgrade_content_db_1_to_2(engine: AsyncEngine) -> bool:
 
 async def upgrade_content_db_2_to_3(engine: AsyncEngine) -> bool:
     try:
-        logger.info("开始迁移旧数据...")
+        logger.info("升级数据库 2 -> 3")
 
         # 反射所有表
         metadata = MetaData()
