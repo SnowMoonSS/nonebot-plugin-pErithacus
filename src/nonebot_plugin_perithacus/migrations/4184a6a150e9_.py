@@ -41,19 +41,23 @@ def upgrade(name: str = "") -> None:
         sa.select(content_table.c.id, content_table.c.content)
     ).fetchall()
 
-    # 遍历每条记录，更新content列
+    # 遍历每条记录，更新content列，content 是一个包含多个字典的列表
     for row in result:
         try:
-            content_data = json.loads(row.content)
-            if isinstance(content_data, dict) and 'media' in content_data:
-                # 删除media字段
-                del content_data['media']
+            contents = json.loads(row.content)
+            modified = False
+            for content in contents:
+                if 'media' in content:
+                    # 删除media字段
+                    del content['media']
+                    modified = True
 
-                # 更新数据库中的记录
+                    # 更新数据库中的记录
+            if modified:
                 connection.execute(
                     content_table.update()
                     .where(content_table.c.id == row.id)
-                    .values(content=json.dumps(content_data, ensure_ascii=False))
+                    .values(content=json.dumps(contents, ensure_ascii=False))
                 )
         except (json.JSONDecodeError, TypeError):
             # 如果不是有效的JSON，跳过这条记录
@@ -77,32 +81,29 @@ def upgrade(name: str = "") -> None:
         updated_keyword = None
         updated_alias = None
 
-        # 处理 keyword 列
+        # 处理 keyword 列，keyword 是一个包含多个字典的列表
         try:
-            keyword_data = json.loads(row.keyword)
-            if isinstance(keyword_data, dict) and 'media' in keyword_data:
-                # 删除 media 字段
-                del keyword_data['media']
-                updated_keyword = json.dumps(keyword_data, ensure_ascii=False)
+            keywords = json.loads(row.keyword)
+            for keyword in keywords:
+                if 'media' in keyword:
+                    # 删除 media 字段
+                    del keyword['media']
+            updated_keyword = json.dumps(keywords, ensure_ascii=False)
         except (json.JSONDecodeError, TypeError):
             # 如果不是有效的 JSON，跳过这条记录
             pass
 
-        # 处理 alias 列
+        # 处理 alias 列，alias 是一个包含多个列表的列表，列表的列表里面是多个字典
         try:
-            alias_data = json.loads(row.alias)
-            if isinstance(alias_data, list):
+            aliases = json.loads(row.alias)
+            for alias in aliases:
                 # 对列表中的每个元素进行处理
-                updated_alias_list = []
-                for item in alias_data:
-                    if isinstance(item, dict) and 'media' in item:
+                for item in alias:
+                    if 'media' in item:
                         # 删除 media 字段
-                        item_without_media = {k: v for k, v in item.items() if k != 'media'}
-                        updated_alias_list.append(item_without_media)
-                    else:
-                        updated_alias_list.append(item)
+                        del item['media']
 
-                updated_alias = json.dumps(updated_alias_list, ensure_ascii=False)
+            updated_alias = json.dumps(aliases, ensure_ascii=False)
         except (json.JSONDecodeError, TypeError):
             # 如果不是有效的 JSON，跳过这条记录
             pass
