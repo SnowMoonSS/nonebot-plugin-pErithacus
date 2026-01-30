@@ -336,6 +336,10 @@ def pe_seg_dump(
         若不指定 media_save_dir，则会尝试导入 `nonebot_plugin_localstore` 并使用其提供的路径。
         否则，将会尝试使用当前工作目录。
     """
+    # 如果不是 Media 及其子类，直接委托给原版 .dump()
+    if not isinstance(self, Media):
+        # 原版 dump 方法通常支持 **kwargs，传入 media_save_dir 是安全的
+        return self.dump(media_save_dir=media_save_dir)
     data = {f.name: getattr(self, f.name) for f in fields(self) if f.name not in ("origin", "_children")}
     data = {"type": self.type, **{k: v for k, v in data.items() if v is not None}}
     if isinstance(self, Media):
