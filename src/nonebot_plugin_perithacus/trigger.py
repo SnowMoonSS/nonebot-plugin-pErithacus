@@ -16,8 +16,6 @@ async def _(
     uni_msg: UniMsg,
 ):
     uni_msg = await pe_download(uni_msg)
-    await uni_msg.download()
-    logger.debug(f"原始消息: {uni_msg.dump(media_save_dir=False, json=True)}")
     msg_text = await dump_msg(uni_msg, media_save_dir=False)
     logger.debug(f"收到消息: {msg_text}")
 
