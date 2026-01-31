@@ -8,7 +8,7 @@ from .apscheduler import remove_cron_job
 from .command import pe
 from .database import get_entry, update_entry
 from .handle_args import handle_main_args
-from .lib import convert_media, get_scope, get_source
+from .lib import dump_msg, get_scope, get_source
 
 
 @pe.assign("del")
@@ -17,7 +17,6 @@ async def _(
     uni_msg: UniMsg,
     session: async_scoped_session,
 
-    #keyword: Match[UniMessage] = AlconnaMatch("keyword"),
     scope: Match[str] = AlconnaMatch("scope"),
 ):
     """
@@ -27,8 +26,7 @@ async def _(
 
     main_args = await handle_main_args(uni_msg, "del")
 
-    #keyword_text = await convert_media(keyword.result)
-    keyword_text = await convert_media(main_args.keyword)
+    keyword_text = await dump_msg(main_args.keyword, media_save_dir=False)
     this_source = get_source(target)
     scope_list = await get_scope(scope, this_source)
 

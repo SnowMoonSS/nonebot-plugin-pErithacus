@@ -16,7 +16,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import Index, get_all_contents, get_entries, get_entry_by_id
-from .lib import convert_media, get_scope, get_source, load_media
+from .lib import dump_msg, get_scope, get_source, load_msg
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -56,10 +56,7 @@ async def _(  # noqa: PLR0913
         # 分页处理
         page_size = 5
         total_count = len(result_list)
-        if total_count > 0:
-            total_pages = (total_count + page_size - 1) // page_size
-        else:
-            total_pages = 1
+        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
 
         # 获取当前页码
         current_page = page.result if page.available and page.result > 0 else 1
@@ -77,7 +74,7 @@ async def _(  # noqa: PLR0913
             entry_id = result_list[i]
             entry = await get_entry_by_id(session, entry_id)
             if entry:
-                search_results.extend(f"\n{entry.id}　" + load_media(entry.keyword))
+                search_results.extend(f"\n{entry.id}　" + load_msg(entry.keyword))
 
         logger.info(f"搜索结果列表：{result_list}")
         await pe.finish(search_results)
@@ -85,7 +82,7 @@ async def _(  # noqa: PLR0913
         await pe.finish(UniMessage("搜索结果：\n无"))
 
 async def get_key(keyword: Match) -> str:
-    keyword_text = await convert_media(keyword.result)
+    keyword_text = await dump_msg(keyword.result, media_save_dir=False)
     pe_message_list = json.loads(keyword_text)
 
     # 检查pe_message_list中的每个元素
