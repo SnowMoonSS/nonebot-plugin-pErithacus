@@ -59,7 +59,7 @@ async def _(  # noqa: PLR0913
         alias_text = await dump_msg(main_args.alias)
         logger.debug(f"Alias: {alias_text}")
     else:
-        alias_text = await dump_msg(alias.result)
+        alias_text = "" # 未提供别名时，这里无论是什么值都无所谓。此处仅防止后面出现 alisa_text 未定义的错误。
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if existing_entry:
@@ -115,10 +115,7 @@ async def _(  # noqa: PLR0913
             reg = reg.result if reg.available else None,
             source = this_source,
             target = json.dumps(target.dump()),
-            alias = (
-                json.dumps([alias_text])
-                if (alias.available and alias_text)
-                else None)
+            alias = json.dumps([alias_text] if alias.available and alias_text else None)
         )
 
         await session.flush()

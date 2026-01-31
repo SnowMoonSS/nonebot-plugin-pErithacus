@@ -67,7 +67,7 @@ async def _(  # noqa: PLR0913
         alias_text = await dump_msg(main_args.alias)
         logger.debug(f"Alias: {alias_text}")
     else:
-        alias_text = await dump_msg(alias.result)
+        alias_text = ""
 
     existing_entry = await get_entry(session, keyword_text, scope_list)
     if not existing_entry:
