@@ -6,7 +6,7 @@ from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import on_every_message
 from .database import get_contents, get_entry
-from .lib import dump_msg, get_source, load_msg, pe_download
+from .lib import dump_msg, get_source, load_msg
 
 
 @on_every_message.handle()
@@ -15,9 +15,6 @@ async def _(
     session: async_scoped_session,
     uni_msg: UniMsg,
 ):
-    uni_msg = await pe_download(uni_msg)
-    await uni_msg.download()
-    logger.debug(f"原始消息: {uni_msg.dump(media_save_dir=False, json=True)}")
     msg_text = await dump_msg(uni_msg, media_save_dir=False)
     logger.debug(f"收到消息: {msg_text}")
 
