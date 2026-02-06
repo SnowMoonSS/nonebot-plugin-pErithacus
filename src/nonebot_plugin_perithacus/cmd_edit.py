@@ -7,7 +7,6 @@ from .database import (
     delete_contents,
     get_contents,
     get_entry,
-    replace_content,
     update_entry,
 )
 from .handle_args import (
@@ -37,8 +36,6 @@ async def _(  # noqa: PLR0913
     alias: Match[UniMessage] = AlconnaMatch("alias"),
     del_alias_id: Match[str] = AlconnaMatch("del_alias_id"),
     del_content_id: Match[str] = AlconnaMatch("del_content_id"),
-    replace_id: Match[int] = AlconnaMatch("replace_id"),
-    content: Match[UniMessage] = AlconnaMatch("content"),
 ):
     """
     修改词条
@@ -53,14 +50,12 @@ async def _(  # noqa: PLR0913
         or alias.available
         or del_alias_id.available
         or del_content_id.available
-        or replace_id.available
     ):
         await pe.finish("未提供修改项")
 
     main_args = await handle_main_args(uni_msg, "edit")
 
     keyword_text = await dump_msg(main_args.keyword)
-    content_text = await dump_msg(content.result)
     this_source = get_source(target)
     scope_list = await get_scope(scope, this_source)
     if main_args.alias:
@@ -113,26 +108,6 @@ async def _(  # noqa: PLR0913
             msg.append("删除内容成功！\n")
         else:
             msg.append(f"删除内容失败，失败的内容编号有：{result.failed_ids}，请检查内容编号是否正确\n")
-
-    if replace_id.available and content.available:
-        existing_content_ids = [
-            content.id for content in await get_contents(session, existing_entry.id)
-        ]
-        if replace_id.result not in existing_content_ids:
-            await pe.finish(
-                f"内容编号 {replace_id.result} 不存在于词条 "
-                + main_args.keyword
-                + " 中，请检查后重试"
-            )
-        if await replace_content(
-            session,
-            existing_entry.id,
-            replace_id.result,
-            content_text
-        ):
-            msg.append("替换内容成功！\n")
-        else:
-            msg.append("替换内容失败，请检查内容编号是否正确\n")
 
     existing_entry = await update_entry(
         session,

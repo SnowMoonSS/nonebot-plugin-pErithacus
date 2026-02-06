@@ -112,7 +112,9 @@ class MainArgs:
     content: UniMessage
     alias: UniMessage | None
 
-def get_part_text(msg_text: str) -> list[str]:
+def get_part_text(msg_text: str | None) -> list[str]:
+    if not msg_text:
+        return []
     pattern = r"\[[^\]]*\]"
     matches = list(re.finditer(pattern, msg_text))
 
@@ -150,11 +152,11 @@ def get_part_keyword(msg_text: str) -> str:
     else:
         pattern = r"\s\S"
         matches = list(re.finditer(pattern, msg_text))
-        keyword = msg_text[:matches[0].start()] if matches[0] else msg_text
+        keyword = msg_text[:matches[0].start()] if matches else msg_text
 
     return keyword
 
-def get_part_content(msg_text: str) -> str:
+def get_part_content(msg_text: str) -> str | None:
     content = ""
     param_pattern = re.compile(r'\s(?:-a|--alias)\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))')
     if msg_text.startswith(" "):
@@ -174,10 +176,11 @@ def get_part_content(msg_text: str) -> str:
             content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
     else:
         matches = list(re.finditer(r"\s\S", msg_text))
-        start_index = matches[0].start()
-        sub_string = msg_text[start_index:]
-        clean_content = param_pattern.sub("", sub_string)
-        content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
+        if matches:
+            start_index = matches[0].start()
+            sub_string = msg_text[start_index:]
+            clean_content = param_pattern.sub("", sub_string)
+            content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
     return content
 
 def get_part_alias(msg_text: str) -> str | None:

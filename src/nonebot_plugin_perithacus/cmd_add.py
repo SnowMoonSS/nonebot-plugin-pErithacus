@@ -115,7 +115,7 @@ async def _(  # noqa: PLR0913
             reg = reg.result if reg.available else None,
             source = this_source,
             target = json.dumps(target.dump()),
-            alias = json.dumps([alias_text] if alias.available and alias_text else None)
+            alias = json.dumps([alias_text] if alias.available and alias_text else [])
         )
 
         await session.flush()
