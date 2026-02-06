@@ -86,12 +86,6 @@ perithacus = Alconna(
             Args["del_content_id#删除指定id的内容", str],
             default=""
         ),
-        Option(
-            "-p|--replace",
-            Args["replace_id#将被替换的内容编号", int]
-                ["content#要替换的内容", MultiVar(Any)],
-            help_text="替换指定id的回复",
-        ),
         help_text="修改词条",
     ),
     meta=CommandMeta(
