@@ -13,8 +13,7 @@ from typing import Any, Literal, overload
 import filetype
 import httpx
 from apscheduler.triggers.cron import CronTrigger
-from nonebot import get_driver, logger
-from nonebot.internal.driver import HTTPClientMixin, Request
+from nonebot import logger
 from nonebot_plugin_alconna import Match, MsgTarget, UniMessage
 from nonebot_plugin_alconna.uniseg.segment import Media, Segment
 from nonebot_plugin_localstore import get_plugin_data_dir
@@ -249,32 +248,19 @@ async def pe_download(
         **kwargs: 传递给下载器的参数
     """
     logger.debug("开始下载媒体数据")
-    driver = get_driver()
-    use_driver = isinstance(driver, HTTPClientMixin)
     for media in self.select(Media):
         if not media.url:
             continue
         raw: bytes = b""
-        if use_driver:
-            request = Request("GET", media.url)
-            sess = driver.get_session(**kwargs)
+        async with httpx.AsyncClient(**kwargs) as client:
             if stream:
-                async for chunk in sess.stream_request(request):
-                    raw += chunk.content # pyright: ignore[reportOperatorIssue]
+                raw = b""
+                async with client.stream("GET", media.url) as response:
+                    async for chunk in response.aiter_bytes():
+                        raw += chunk
             else:
-                response = await sess.request(request)
-                raw = response.content # pyright: ignore[reportAssignmentType]
-        else:
-            logger.debug("当前驱动器不支持 http 客户端，使用 httpx 下载")
-            async with httpx.AsyncClient(**kwargs) as client:
-                if stream:
-                    raw = b""
-                    async with client.stream("GET", media.url) as response:
-                        async for chunk in response.aiter_bytes():
-                            raw += chunk
-                else:
-                    response = await client.get(media.url)
-                    raw = response.content
+                response = await client.get(media.url)
+                raw = response.content
         media.url = None
         media.raw = raw
 
