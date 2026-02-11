@@ -12,11 +12,12 @@ from nonebot_plugin_alconna import (
     Query,
     UniMessage,
 )
+from nonebot_plugin_alconna.uniseg.segment import At, Media
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import Index, get_all_contents, get_entries, get_entry_by_id
-from .lib import dump_msg, get_scope, get_source, load_msg
+from .lib import get_scope, get_source, load_msg, pe_download
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -82,19 +83,17 @@ async def _(  # noqa: PLR0913
         await pe.finish(UniMessage("搜索结果：\n无"))
 
 async def get_key(keyword: Match) -> str:
-    keyword_text = await dump_msg(keyword.result, media_save_dir=False)
-    pe_message_list = json.loads(keyword_text)
+    msg = UniMessage(keyword.result) if not isinstance(keyword.result, UniMessage) else keyword.result
+    msg = await pe_download(msg)
 
     # 检查pe_message_list中的每个元素
     key = None
-    for item in pe_message_list:
-        if not isinstance(item, dict):
-            continue
-        if item.get("media"):
-            key = item["id"]
+    for seg in msg:
+        if isinstance(seg, Media):
+            key = seg.id
             break
-        if item.get("type") == "at":
-            key = item["target"]
+        if isinstance(seg, At):
+            key = seg.target
             break
     if not key:
         key = UniMessage(keyword.result).extract_plain_text()

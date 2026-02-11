@@ -247,10 +247,10 @@ async def pe_download(
         stream (bool, optional): 是否以流式下载. Defaults to False.
         **kwargs: 传递给下载器的参数
     """
-    logger.debug("开始下载媒体数据")
     for media in self.select(Media):
         if not media.url:
             continue
+        logger.debug("开始下载媒体数据")
         raw: bytes = b""
         async with httpx.AsyncClient(**kwargs) as client:
             if stream:
