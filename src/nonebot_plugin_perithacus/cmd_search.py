@@ -12,11 +12,12 @@ from nonebot_plugin_alconna import (
     Query,
     UniMessage,
 )
+from nonebot_plugin_alconna.uniseg.segment import At, Media
 from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
 
 from .command import pe
 from .database import Index, get_all_contents, get_entries, get_entry_by_id
-from .lib import dump_msg, get_scope, get_source, load_msg
+from .lib import get_scope, get_source, load_msg, pe_download
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -82,19 +83,17 @@ async def _(  # noqa: PLR0913
         await pe.finish(UniMessage("搜索结果：\n无"))
 
 async def get_key(keyword: Match) -> str:
-    keyword_text = await dump_msg(keyword.result, media_save_dir=False)
-    pe_message_list = json.loads(keyword_text)
+    msg = UniMessage(keyword.result) if not isinstance(keyword.result, UniMessage) else keyword.result
+    msg = await pe_download(msg)
 
     # 检查pe_message_list中的每个元素
     key = None
-    for item in pe_message_list:
-        if not isinstance(item, dict):
-            continue
-        if item.get("media"):
-            key = item["id"]
+    for seg in msg:
+        if isinstance(seg, Media):
+            key = seg.id
             break
-        if item.get("type") == "at":
-            key = item["target"]
+        if isinstance(seg, At):
+            key = seg.target
             break
     if not key:
         key = UniMessage(keyword.result).extract_plain_text()
@@ -110,9 +109,7 @@ async def search_in_entries(
             # 检查keyword列和alias列包含key的行
             if key in entry.keyword or (entry.alias and key in entry.alias):
                 result_list.append(entry.id)
-                logger.info(
-                    f"在 Index 中找到匹配的词条 {entry.id}，关键词 {entry.keyword}"
-                )
+                logger.info(f"在 Index 中找到匹配的词条 {entry.id}，关键词 {entry.keyword}")
     return result_list
 
 async def search_in_contents(
@@ -124,14 +121,11 @@ async def search_in_contents(
 ) -> list[int]:
     contents = await get_all_contents(session)
     for content in contents:
-        if not content.deleted and key in content.content:
-            if content.entry_id not in result_list:
-                if not await check_is_deleted(session, content.entry_id, scope_list):
-                    result_list.append(content.entry_id)
-            else:
-                logger.debug(f"跳过词条 {content.entry_id}，该词条已存在搜索结果中")
-        else:
-            logger.debug(f"未在 {content.entry_id} 中找到包含 {key} 的内容")
+        if ((not content.deleted and key in content.content)
+            and (content.entry_id not in result_list)
+            and (not await check_is_deleted(session, content.entry_id, scope_list))):
+            result_list.append(content.entry_id)
+            logger.debug(f"在 {content.entry_id} 中找到包含 {key} 的内容")
 
     return result_list
 

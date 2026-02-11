@@ -247,10 +247,10 @@ async def pe_download(
         stream (bool, optional): 是否以流式下载. Defaults to False.
         **kwargs: 传递给下载器的参数
     """
-    logger.debug("开始下载媒体数据")
     for media in self.select(Media):
         if not media.url:
             continue
+        logger.debug("开始下载媒体数据")
         raw: bytes = b""
         async with httpx.AsyncClient(**kwargs) as client:
             if stream:
@@ -363,7 +363,7 @@ def pe_save(
     return path.resolve()
 
 async def dump_msg(
-    msg: UniMessage,
+    msg: UniMessage | str | tuple,
     *,
     media_save_dir: str | Path | bool | None = MEDIA_SAVE_DIR
 ) -> str:
@@ -382,7 +382,7 @@ async def dump_msg(
     :rtype: str
     """
 
-    if isinstance(msg, tuple):
+    if not isinstance(msg, UniMessage):
         msg = UniMessage(msg)
 
     msg = await pe_download(msg)
