@@ -110,9 +110,7 @@ async def search_in_entries(
             # 检查keyword列和alias列包含key的行
             if key in entry.keyword or (entry.alias and key in entry.alias):
                 result_list.append(entry.id)
-                logger.info(
-                    f"在 Index 中找到匹配的词条 {entry.id}，关键词 {entry.keyword}"
-                )
+                logger.info(f"在 Index 中找到匹配的词条 {entry.id}，关键词 {entry.keyword}")
     return result_list
 
 async def search_in_contents(
@@ -124,14 +122,11 @@ async def search_in_contents(
 ) -> list[int]:
     contents = await get_all_contents(session)
     for content in contents:
-        if not content.deleted and key in content.content:
-            if content.entry_id not in result_list:
-                if not await check_is_deleted(session, content.entry_id, scope_list):
-                    result_list.append(content.entry_id)
-            else:
-                logger.debug(f"跳过词条 {content.entry_id}，该词条已存在搜索结果中")
-        else:
-            logger.debug(f"未在 {content.entry_id} 中找到包含 {key} 的内容")
+        if ((not content.deleted and key in content.content)
+            and (content.entry_id not in result_list)
+            and (not await check_is_deleted(session, content.entry_id, scope_list))):
+            result_list.append(content.entry_id)
+            logger.debug(f"在 {content.entry_id} 中找到包含 {key} 的内容")
 
     return result_list
 

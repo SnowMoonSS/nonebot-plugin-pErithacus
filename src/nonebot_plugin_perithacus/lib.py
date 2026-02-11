@@ -363,7 +363,7 @@ def pe_save(
     return path.resolve()
 
 async def dump_msg(
-    msg: UniMessage,
+    msg: UniMessage | str | tuple,
     *,
     media_save_dir: str | Path | bool | None = MEDIA_SAVE_DIR
 ) -> str:
@@ -382,7 +382,7 @@ async def dump_msg(
     :rtype: str
     """
 
-    if isinstance(msg, tuple):
+    if not isinstance(msg, UniMessage):
         msg = UniMessage(msg)
 
     msg = await pe_download(msg)
