@@ -320,7 +320,8 @@ async def add_entry(
         **kwargs
     )
     session.add(new_entry)
-    logger.debug(f"添加新词条 {new_entry.id} : {new_entry.keyword} 到 Index")
+    await session.flush()
+    logger.info(f"添加新词条 {new_entry.id}: {new_entry.keyword} 到 Index")
     return new_entry
 
 async def get_entry_by_id(
@@ -535,7 +536,6 @@ async def add_content(
             await restore_deleted_content(session, row.id)
             return AddContentResult(success=True, content_id=row.id)
 
-    logger.debug(f"添加内容 {content} 到 Content")
     new_content = Content(
         entry_id=entry_id,
         content=content,
@@ -544,6 +544,7 @@ async def add_content(
     )
     session.add(new_content)
     await session.flush()
+    logger.info(f"添加内容 {new_content.id}: {content} 到 Content")
     return AddContentResult(success=True, content_id=new_content.id)
 
 async def delete_content(session: async_scoped_session, content_id: int) -> bool:
