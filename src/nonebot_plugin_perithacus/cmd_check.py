@@ -2,7 +2,7 @@ import json
 from datetime import UTC, timedelta, timezone
 
 from nonebot_plugin_alconna import AlconnaMatch, AlconnaQuery, Match, Query, UniMessage
-from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
+from nonebot_plugin_orm import async_scoped_session
 
 from .command import pe
 from .database import get_entry_by_id

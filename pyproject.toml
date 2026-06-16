@@ -17,7 +17,7 @@ authors = [{ name = "SnowMoonSS" }]
 license = "MIT"
 classifiers = [
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
   "Framework :: Robot Framework"
 ]
@@ -58,7 +58,7 @@ nonebot-plugin-apscheduler = ["nonebot_plugin_apscheduler"]
 
 [tool.ruff]
 line-length = 128
-target-version = "py314"
+target-version = "py312"
 
 [tool.ruff.format]
 line-ending = "lf"
@@ -126,6 +126,6 @@ keep-runtime-typing = true
 
 [tool.pyright]
 # For Pylance/Pyright configurations, see https://microsoft.github.io/pyright/#/configuration.
-pythonVersion = "3.14"
+pythonVersion = "3.12"
 pythonPlatform = "All"
 typeCheckingMode = "standard"

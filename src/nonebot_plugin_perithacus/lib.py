@@ -10,6 +10,7 @@ from json import dumps
 from pathlib import Path
 from typing import Any, Literal, overload
 
+import anyio
 import filetype
 import httpx
 from apscheduler.triggers.cron import CronTrigger
@@ -37,11 +38,11 @@ async def download_media(
     :return: 最终文件路径 或 None（失败时）
     """
     save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=True)
+    await anyio.Path(save_dir).mkdir(parents=True, exist_ok=True)
 
     # 创建临时文件（在 save_dir 中）
     with tempfile.NamedTemporaryFile(delete=False, dir=save_dir) as tmp_file:
-        tmp_path = Path(tmp_file.name)
+        tmp_path = anyio.Path(tmp_file.name)
         md5_hash = hashlib.md5()
 
         try:
@@ -59,13 +60,13 @@ async def download_media(
             os.fsync(tmp_file.fileno())
         except httpx.HTTPError as e:
             # 包括连接错误、超时、4xx/5xx 等
-            tmp_path.unlink(missing_ok=True)
+            await tmp_path.unlink(missing_ok=True)
             logger.error(f"HTTP 请求失败: {e}")
             return None
 
         except OSError as e:
             # 文件写入、fsync、磁盘空间、权限等问题
-            tmp_path.unlink(missing_ok=True)
+            await tmp_path.unlink(missing_ok=True)
             logger.error(f"文件 I/O 错误: {e}")
             return None
 
@@ -82,20 +83,20 @@ async def download_media(
     final_path = save_dir / (md5_hex + extension)
 
     if json:
-        tmp_path.unlink(missing_ok=True)
+        await tmp_path.unlink(missing_ok=True)
         return final_path
-    if final_path.exists():
+    if await anyio.Path(final_path).exists():
         logger.info(f"文件已存在，跳过: {final_path}")
-        tmp_path.unlink(missing_ok=True)
+        await tmp_path.unlink(missing_ok=True)
         return final_path
 
     # 重命名
     try:
-        tmp_path.rename(final_path)
+        await tmp_path.rename(anyio.Path(final_path))
         logger.info(f"保存成功: {final_path}")
     except OSError as e:
         logger.info(f"重命名失败: {e}")
-        tmp_path.unlink(missing_ok=True)
+        await tmp_path.unlink(missing_ok=True)
         return None
     else:
         return final_path
