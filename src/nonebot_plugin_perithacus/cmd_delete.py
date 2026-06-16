@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 
 from nonebot_plugin_alconna import AlconnaMatch, Match, MsgTarget, UniMsg
-from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
+from nonebot_plugin_orm import async_scoped_session
 
 from .apscheduler import remove_cron_job
 from .command import pe

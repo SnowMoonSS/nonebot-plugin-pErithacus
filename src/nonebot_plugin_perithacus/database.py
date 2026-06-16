@@ -151,6 +151,8 @@ def _is_fuzzy_match(entry: Index, keyword_msg: UniMessage) -> bool:
         return False
 
     key = keyword_msg.extract_plain_text()
+    if not key:  # 空字符串不应匹配任何词条
+        return False
     entry_key = load_media(entry.keyword).extract_plain_text()
     if key in entry_key:
         return True
@@ -174,6 +176,8 @@ def _is_regex_match(entry: Index, keyword_msg: UniMessage) -> bool:
         return False
 
     key = keyword_msg.extract_plain_text()
+    if not key:  # 空字符串不应匹配任何词条
+        return False
     return bool(re.match(entry.reg, key))
 
 async def matching(
@@ -320,7 +324,8 @@ async def add_entry(
         **kwargs
     )
     session.add(new_entry)
-    logger.debug(f"添加新词条 {new_entry.id} : {new_entry.keyword} 到 Index")
+    await session.flush()
+    logger.info(f"添加新词条 {new_entry.id}: {new_entry.keyword} 到 Index")
     return new_entry
 
 async def get_entry_by_id(
@@ -535,7 +540,6 @@ async def add_content(
             await restore_deleted_content(session, row.id)
             return AddContentResult(success=True, content_id=row.id)
 
-    logger.debug(f"添加内容 {content} 到 Content")
     new_content = Content(
         entry_id=entry_id,
         content=content,
@@ -544,6 +548,7 @@ async def add_content(
     )
     session.add(new_content)
     await session.flush()
+    logger.info(f"添加内容 {new_content.id}: {content} 到 Content")
     return AddContentResult(success=True, content_id=new_content.id)
 
 async def delete_content(session: async_scoped_session, content_id: int) -> bool:

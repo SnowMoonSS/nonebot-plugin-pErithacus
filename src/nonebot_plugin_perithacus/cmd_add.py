@@ -8,7 +8,7 @@ from nonebot_plugin_alconna import (
     UniMessage,
     UniMsg,
 )
-from nonebot_plugin_orm import async_scoped_session  # noqa: TC002
+from nonebot_plugin_orm import async_scoped_session
 
 from .apscheduler import add_cron_job
 from .command import pe
@@ -27,7 +27,7 @@ from .handle_args import (
     handle_reg,
     handle_scope,
 )
-from .lib import dump_msg, get_cron, get_scope, get_source, load_media
+from .lib import dump_msg, get_cron, get_scope, get_source
 
 
 @pe.assign("add")
@@ -91,13 +91,13 @@ async def _(  # noqa: PLR0913
             entry_id = existing_entry.id
             await session.commit()
 
-            uni_keyword = load_media(keyword_text)
+            uni_keyword = UniMessage.load(keyword_text)
             await pe.finish(
                 f"词条 {entry_id} : " + uni_keyword + " 加入了新的内容："
                 f"{add_content_result.content_id}"
             )
         else:
-            uni_keyword = load_media(keyword_text)
+            uni_keyword = UniMessage.load(keyword_text)
             await pe.finish(
                 f"词条 {existing_entry.id} : " + uni_keyword + " 已存在该内容："
                 f"{add_content_result.content_id}",
@@ -128,7 +128,7 @@ async def _(  # noqa: PLR0913
         entry_id = new_entry.id
         await session.commit()
 
-        uni_keyword = load_media(keyword_text)
+        uni_keyword = UniMessage.load(keyword_text)
         await pe.finish(
             f"词条 {entry_id} : " + uni_keyword + " 已创建并加入了新的内容："
             f"{add_content_result.content_id}"
