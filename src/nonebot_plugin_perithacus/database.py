@@ -151,6 +151,8 @@ def _is_fuzzy_match(entry: Index, keyword_msg: UniMessage) -> bool:
         return False
 
     key = keyword_msg.extract_plain_text()
+    if not key:  # 空字符串不应匹配任何词条
+        return False
     entry_key = load_media(entry.keyword).extract_plain_text()
     if key in entry_key:
         return True
@@ -174,6 +176,8 @@ def _is_regex_match(entry: Index, keyword_msg: UniMessage) -> bool:
         return False
 
     key = keyword_msg.extract_plain_text()
+    if not key:  # 空字符串不应匹配任何词条
+        return False
     return bool(re.match(entry.reg, key))
 
 async def matching(
