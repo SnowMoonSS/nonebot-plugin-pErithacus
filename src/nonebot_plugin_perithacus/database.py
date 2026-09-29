@@ -116,7 +116,7 @@ async def get_all_entries(
     result = await session.execute(select_stmt)
     return result.scalars().all()
 
-def _is_in_scope(entry: Index, scope_list: list[str]) -> bool:
+def is_in_scope(entry: Index, scope_list: list[str]) -> bool:
     """判断 entry 是否在指定的作用域内"""
     try:
         scope_list_from_db = json.loads(entry.scope) if entry.scope else []
@@ -196,7 +196,7 @@ async def matching(
 
     for entry in entries:
         # 1. 作用域过滤
-        if not _is_in_scope(entry, scope_list):
+        if not is_in_scope(entry, scope_list):
             continue
 
         # 2. 精准匹配
