@@ -31,7 +31,7 @@ from .lib import dump_msg, get_cron, get_scope, get_source
 
 
 @pe.assign("add")
-async def _(  # noqa: PLR0913
+async def _(  # noqa: PLR0913, PLR0917
     target: MsgTarget,
     uni_msg: UniMsg,
     session: async_scoped_session,
@@ -48,6 +48,8 @@ async def _(  # noqa: PLR0913
     """
 
     main_args = await handle_main_args(uni_msg, "add")
+    if not str(main_args.content).strip():
+        await pe.finish("回复内容为空，请输入回复内容")
     keyword_text = await dump_msg(main_args.keyword)
     logger.debug(f"Keyword: {keyword_text}")
     content_text = await dump_msg(main_args.content)

@@ -90,6 +90,9 @@ perithacus = Alconna(
     ),
     meta=CommandMeta(
         keep_crlf=True,
+        # 非严格匹配：允许消息中出现未声明的额外消息段（图片、@ 等），
+        # 否则 "pe del 关键词" + 图片 这类消息会因参数数量不匹配，整条命令匹配失败
+        strict=False,
     )
 )
 pe = on_alconna(perithacus, skip_for_unmatch=False, use_cmd_start=True, aliases={"pe"})

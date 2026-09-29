@@ -104,7 +104,7 @@ class Index(Model):
     )
 
 async def get_all_entries(
-    session: async_scoped_session,
+    session: async_scoped_session | AsyncSession,
     *,
     is_force: bool = False
 ) -> Sequence[Index]:
@@ -471,6 +471,16 @@ async def get_all_contents(
     select_stmt = select(Content)
     result = await session.execute(select_stmt)
     return result.scalars().all()
+
+async def get_entry_ids_with_content(
+    session: async_scoped_session | AsyncSession
+) -> set[int]:
+    """
+    返回所有拥有未删除内容的词条 ID
+    """
+    select_stmt = select(Content.entry_id).where(~Content.deleted).distinct()
+    result = await session.execute(select_stmt)
+    return set(result.scalars().all())
 
 def remove_sticker_info(content_str: str) -> str:
     """
