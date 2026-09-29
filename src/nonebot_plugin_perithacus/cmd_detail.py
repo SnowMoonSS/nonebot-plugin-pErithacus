@@ -72,7 +72,7 @@ async def _(  # noqa: PLR0913, PLR0917
 
     msg = UniMessage(
         f"词条 {entry.id} : " + load_msg(entry.keyword) +
-        f"的内容如下（第 {current_page}/{total_pages} 页）：\n"
+        f" 的内容如下（第 {current_page}/{total_pages} 页）：\n"
     )
 
     # 显示当前页的内容
