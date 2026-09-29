@@ -21,12 +21,12 @@ from . import database as database
 from . import handle_args as handle_args
 from . import lib as lib
 from . import trigger as trigger
-from .apscheduler import load_cron_tasks
+from .apscheduler import load_cron_tasks, warn_entries_without_content
 from .upgrade_database import upgrade_content_db
 
 driver = get_driver()
 
-__version__ = "1.4.5"
+__version__ = "1.4.6"
 __plugin_meta__ = PluginMetadata(
     name="pErithacus",
     description=("pErithacus 是一个基于 NoneBot2 框架的聊天插件，"
@@ -41,6 +41,7 @@ __plugin_meta__ = PluginMetadata(
 @driver.on_startup
 async def _load_perithacus():
     try:
+        await warn_entries_without_content()
         await load_cron_tasks()
     except (OperationalError, ProgrammingError) as e:
         logger.exception("数据库操作失败，无法加载定时任务: %s", e)

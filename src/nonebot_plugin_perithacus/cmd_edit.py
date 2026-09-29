@@ -2,6 +2,7 @@ from nonebot import logger
 from nonebot_plugin_alconna import AlconnaMatch, Match, MsgTarget, UniMessage, UniMsg
 from nonebot_plugin_orm import async_scoped_session
 
+from .apscheduler import remove_cron_job
 from .command import pe
 from .database import (
     delete_contents,
@@ -23,7 +24,7 @@ from .lib import dump_msg, get_num_list, get_scope, get_source
 
 
 @pe.assign("edit")
-async def _(  # noqa: PLR0913
+async def _(  # noqa: PLR0917, PLR0913
     target: MsgTarget,
     uni_msg: UniMsg,
     session : async_scoped_session,
@@ -106,6 +107,10 @@ async def _(  # noqa: PLR0913
         result = await delete_contents(session, del_content_id.result)
         if result.success:
             msg.append("删除内容成功！\n")
+            has_content_left = any(cid not in content_ids for cid in existing_content_ids)
+            if existing_entry.cron and not has_content_left:
+                remove_cron_job(existing_entry.id)
+                msg.append("该词条已没有任何回复内容，已同步移除其定时任务\n")
         else:
             msg.append(f"删除内容失败，失败的内容编号有：{result.failed_ids}，请检查内容编号是否正确\n")
 

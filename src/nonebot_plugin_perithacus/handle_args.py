@@ -133,57 +133,72 @@ def get_part_text(msg_text: str | None) -> list[str]:
 
     return parts
 
+def count_placeholders_before(msg_text: str, offset: int) -> int:
+    """
+    统计 msg_text 中 offset 之前出现的非文本段占位符个数。
+    msg_text 中第 i 个占位符对应 not_text_segments[i]，
+    因此返回值即为 offset 处第一个占位符对应的下标
+    """
+    return len(re.findall(r"\[[^\]]*\]", msg_text[:offset]))
+
+def unescape_text(text: str) -> str:
+    """
+    解码文本中的转义字符，如 \\n、\\"。
+    不能直接使用 codecs.decode(text, "unicode_escape")，
+    它会先把文本当作 latin-1 编码，令中文等多字节字符变成乱码
+    """
+    return codecs.decode(text.encode("latin-1", "backslashreplace"), "unicode_escape")
+
 def get_part_keyword(msg_text: str) -> str:
     logger.debug(f"输入的文本: {msg_text}")
     if msg_text.startswith(" "):
-        pattern = r"\s\S"
-        matches = list(re.finditer(pattern, msg_text))
-        keyword = msg_text[:matches[1].start()] if matches[1] else msg_text
-    elif msg_text.startswith('"'):
+        # 命令与关键词之间有多余空格，忽略之
+        msg_text = msg_text.lstrip()
+    if msg_text.startswith('"'):
         pattern = r'"((?:[^"\\]|\\.)*)"'
         match = re.match(pattern, msg_text)
         if match:
             keyword = match.group(1)
             logger.debug(f"解码转义字符前: {keyword}")
-            keyword = codecs.decode(keyword, "unicode_escape")
+            keyword = unescape_text(keyword)
         else:
             matches = list(re.finditer(r"\s\S", msg_text))
-            keyword = msg_text[:matches[0].start()] if matches[0] else msg_text
+            keyword = msg_text[:matches[0].start()] if matches else msg_text
     else:
-        pattern = r"\s\S"
-        matches = list(re.finditer(pattern, msg_text))
+        matches = list(re.finditer(r"\s\S", msg_text))
         keyword = msg_text[:matches[0].start()] if matches else msg_text
 
     return keyword
 
-def get_part_content(msg_text: str) -> str | None:
-    content = ""
-    param_pattern = re.compile(r'\s(?:-a|--alias)\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))')
+def get_part_content(msg_text: str) -> tuple[str, int]:
+    """
+    返回 (回复内容文本, 该文本在 msg_text 中的起始位置)。
+    起始位置用于推算内容中非文本段对应的下标，不能当作 0 处理
+    """
     if msg_text.startswith(" "):
-        pattern = r"\s\S"
-        matches = list(re.finditer(pattern, msg_text))
-        start_index = matches[1].start()
-        sub_string = msg_text[start_index:]
-        clean_content = param_pattern.sub("", sub_string)
-        content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
-    elif msg_text.startswith('"'):
+        # 命令与关键词之间有多余空格，忽略之
+        msg_text = msg_text.lstrip()
+    if msg_text.startswith('"'):
         pattern = r'"(?:[^"\\]|\\.)*"'
         match = re.match(pattern, msg_text)
-        if match:
-            end_pos = match.end()
-            content = msg_text[end_pos:]
-            clean_content = param_pattern.sub("", content)
-            content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
+        if not match:
+            return "", 0
+        start_index = match.end()
     else:
         matches = list(re.finditer(r"\s\S", msg_text))
-        if matches:
-            start_index = matches[0].start()
-            sub_string = msg_text[start_index:]
-            clean_content = param_pattern.sub("", sub_string)
-            content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
-    return content
+        if not matches:
+            return "", 0
+        start_index = matches[0].start()
 
-def get_part_alias(msg_text: str) -> str | None:
+    param_pattern = re.compile(r'\s(?:-a|--alias)\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))')
+    clean_content = param_pattern.sub("", msg_text[start_index:])
+    content = clean_content.removeprefix(" ") if clean_content.startswith(" ") else clean_content
+    return content, start_index
+
+def get_part_alias(msg_text: str) -> tuple[str, int] | None:
+    """
+    返回 (别名文本, 别名值在 msg_text 中的起始位置)，未提供别名时返回 None
+    """
     pattern = r'\s(?:-a|--alias)\s+(?:"((?:[^"\\]|\\.)*)"|(\S+))'
     match = re.search(pattern, msg_text)
 
@@ -191,15 +206,27 @@ def get_part_alias(msg_text: str) -> str | None:
         return None
 
     if match.group(1):
-        alias = match.group(1)
-        alias = codecs.decode(alias, "unicode_escape")
-    else:
-        alias = match.group(2)
+        return unescape_text(match.group(1)), match.start(1)
 
-    return alias
+    return match.group(2), match.start(2)
 
 async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
-    removed_prefix_msg = msg.removeprefix(f"pe {sub_command} ")
+    # 去掉消息开头的「命令名 + 子命令」，例如 "pe del "、"perithacus 删除 "。
+    # 不能写死为 f"pe {sub_command} "，否则命令别名（perithacus、中文子命令）解析会出错
+    prefix_pattern = re.compile(r"^\S+\s+\S+\s*")
+    removed_prefix_msg = msg
+    if removed_prefix_msg and isinstance(removed_prefix_msg[0], Text):
+        first_segment = removed_prefix_msg[0]
+        matched_prefix = prefix_pattern.match(first_segment.text)
+        if matched_prefix:
+            segments = list(removed_prefix_msg)
+            rest_text = first_segment.text[matched_prefix.end():]
+            if rest_text:
+                segments[0] = Text(rest_text)
+            else:
+                segments.pop(0)
+            removed_prefix_msg = UniMessage(segments)
+    logger.debug(f"{sub_command} 子命令去掉前缀后的消息: {removed_prefix_msg.dump(json=True)}")
     onebot_v11_msg = await removed_prefix_msg.export(adapter="OneBot V11")
 
     # 去除 alias 选项以外的其它选项
@@ -217,7 +244,7 @@ async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
         )
     elif sub_command == "edit":
         options_r = (
-            r"\s(?:-m|--match|-r|--random|-c|--cron|-s|--scope|-g|--reg|-A|--del-alias|-C|--del_content|-p|--replace)\s+\S+(?=$|\s)"
+            r"\s(?:-m|--match|-r|--random|-c|--cron|-s|--scope|-g|--regex|-A|--del-alias|-C|--del_content)\s+\S+(?=$|\s)"
         )
     matched_options = re.findall(options_r, str(onebot_v11_msg)) # pyright: ignore[reportPossiblyUnboundVariable]
     for option in matched_options:
@@ -231,25 +258,25 @@ async def handle_main_args(msg: UniMessage, sub_command: str) -> MainArgs:
     logger.debug(f"not_text_segments: {not_text_segments.dump(json=True)}")
 
     logger.debug(f"msg_text: {msg_text}")
-    not_text_segment_index = 0
 
-    keyword = get_keyword(msg_text, not_text_segments, not_text_segment_index)
+    keyword = get_keyword(msg_text, not_text_segments)
 
-    content = get_content(msg_text, not_text_segments, not_text_segment_index)
+    content = get_content(msg_text, not_text_segments)
 
-    alias = get_alias(msg_text, not_text_segments, not_text_segment_index)
+    alias = get_alias(msg_text, not_text_segments)
 
     return MainArgs(keyword, content, alias)
 
 def get_keyword(
     msg_text: str,
-    not_text_segments: list,
-    not_text_segment_index: int
+    not_text_segments: list
 ) -> UniMessage:
     keyword = UniMessage()
     keyword_text = get_part_keyword(msg_text)
     logger.debug(f"keyword_text: {keyword_text}")
     keyword_part_text = get_part_text(keyword_text)
+    # 关键词位于消息开头，其占位符从下标 0 开始
+    not_text_segment_index = 0
     for part in keyword_part_text:
         if part.startswith("["):
             keyword.append(not_text_segments[not_text_segment_index])
@@ -260,14 +287,15 @@ def get_keyword(
 
 def get_content(
     msg_text: str,
-    not_text_segments: list,
-    not_text_segment_index: int
+    not_text_segments: list
 ) -> UniMessage:
     content = UniMessage()
-    content_text = get_part_content(msg_text)
+    content_text, content_offset = get_part_content(msg_text)
     logger.debug(f"content_text: {content_text}")
     content_part_text = get_part_text(content_text)
     logger.debug(f"content_part_text: {content_part_text}")
+    # 关键词里可能已经用掉了一些非文本段，下标需要从内容开头处推算
+    not_text_segment_index = count_placeholders_before(msg_text, content_offset)
     for part in content_part_text:
         if part.startswith("["):
             content.append(not_text_segments[not_text_segment_index])
@@ -278,13 +306,15 @@ def get_content(
 
 def get_alias(
     msg_text: str,
-    not_text_segments: list,
-    not_text_segment_index: int
+    not_text_segments: list
 ) -> UniMessage | None:
     alias = UniMessage()
-    alias_text = get_part_alias(msg_text)
-    if not alias_text:
+    alias_info = get_part_alias(msg_text)
+    if not alias_info:
         return None
+    alias_text, alias_offset = alias_info
+    # 别名里的非文本段位于消息靠后的位置，下标同样不能从 0 开始
+    not_text_segment_index = count_placeholders_before(msg_text, alias_offset)
     alias_part_text = get_part_text(alias_text)
     for part in alias_part_text:
         if part.startswith("["):
