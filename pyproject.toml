@@ -5,6 +5,7 @@ description = "pErithacus 是一个基于 NoneBot2 框架的聊天插件，可�
 readme = "README.md"
 requires-python = ">=3.11, <4.0"
 dependencies = [
+  "greenlet>=3",
   "httpx>=0.24.0",
   "filetype>=1.2.0",
   "nonebot2>=2.4.4",
