@@ -1,4 +1,5 @@
 # requirements.in
+greenlet
 httpx
 filetype
 nonebot-plugin-localstore
